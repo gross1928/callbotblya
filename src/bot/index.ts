@@ -478,18 +478,9 @@ export async function startBot(): Promise<void> {
     validateConfig();
     console.log('🤖 Запуск бота "ДаЕда"...');
     
-    if (config.telegram.webhookUrl) {
-      await bot.launch({
-        webhook: {
-          domain: config.telegram.webhookUrl,
-          port: config.app.port,
-        },
-      });
-      console.log('Bot started with webhook');
-    } else {
-      await bot.launch();
-      console.log('Bot started with polling');
-    }
+    // Use polling mode for Railway deployment
+    await bot.launch();
+    console.log('Bot started with polling');
 
     console.log('✅ Бот успешно запущен!');
   } catch (error) {
