@@ -13,7 +13,7 @@ const openai = new OpenAI({
 export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalysis> {
   try {
     const response = await openai.chat.completions.create({
-      model: config.openai.model,
+      model: config.openai.visionModel,
       messages: [
         {
           role: 'user',
@@ -24,20 +24,22 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
 1. Название блюда
 2. Ингредиенты (список через запятую)
 3. Примерный вес порции в граммах
-4. Калории на 100г
-5. Белки на 100г
-6. Жиры на 100г
-7. Углеводы на 100г
+4. Общие калории всего блюда (не на 100г!)
+5. Общие белки всего блюда в граммах (не на 100г!)
+6. Общие жиры всего блюда в граммах (не на 100г!)
+7. Общие углеводы всего блюда в граммах (не на 100г!)
+
+ВАЖНО: Считай КБЖУ для ВСЕГО блюда, а не на 100г!
 
 Ответь в формате JSON:
 {
   "name": "название блюда",
   "ingredients": ["ингредиент1", "ингредиент2"],
   "weight": вес_в_граммах,
-  "calories_per_100g": калории_на_100г,
-  "protein_per_100g": белки_на_100г,
-  "fat_per_100g": жиры_на_100г,
-  "carbs_per_100g": углеводы_на_100г
+  "total_calories": общие_калории_всего_блюда,
+  "total_protein": общие_белки_всего_блюда_в_граммах,
+  "total_fat": общие_жиры_всего_блюда_в_граммах,
+  "total_carbs": общие_углеводы_всего_блюда_в_граммах
 }`
             },
             {
@@ -62,18 +64,17 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
     // Parse JSON response
     const analysis = JSON.parse(content);
     
-    // Calculate total values based on weight
+    // Use total values directly (no need to multiply)
     const weight = analysis.weight || 100;
-    const multiplier = weight / 100;
 
     return {
       name: analysis.name || 'Неизвестное блюдо',
       ingredients: analysis.ingredients || [],
       weight: weight,
-      calories: Math.round((analysis.calories_per_100g || 0) * multiplier),
-      protein: Math.round((analysis.protein_per_100g || 0) * multiplier * 10) / 10,
-      fat: Math.round((analysis.fat_per_100g || 0) * multiplier * 10) / 10,
-      carbs: Math.round((analysis.carbs_per_100g || 0) * multiplier * 10) / 10,
+      calories: Math.round(analysis.total_calories || 0),
+      protein: Math.round((analysis.total_protein || 0) * 10) / 10,
+      fat: Math.round((analysis.total_fat || 0) * 10) / 10,
+      carbs: Math.round((analysis.total_carbs || 0) * 10) / 10,
     };
 
   } catch (error) {
@@ -88,7 +89,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
 export async function analyzeFoodFromText(description: string): Promise<FoodAnalysis> {
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: config.openai.model,
       messages: [
         {
           role: 'system',
@@ -103,20 +104,22 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
 1. Название блюда
 2. Ингредиенты (список через запятую)
 3. Примерный вес порции в граммах
-4. Калории на 100г
-5. Белки на 100г
-6. Жиры на 100г
-7. Углеводы на 100г
+4. Общие калории всего блюда (не на 100г!)
+5. Общие белки всего блюда в граммах (не на 100г!)
+6. Общие жиры всего блюда в граммах (не на 100г!)
+7. Общие углеводы всего блюда в граммах (не на 100г!)
+
+ВАЖНО: Считай КБЖУ для ВСЕГО блюда, а не на 100г!
 
 Ответь в формате JSON:
 {
   "name": "название блюда",
   "ingredients": ["ингредиент1", "ингредиент2"],
   "weight": вес_в_граммах,
-  "calories_per_100g": калории_на_100г,
-  "protein_per_100g": белки_на_100г,
-  "fat_per_100g": жиры_на_100г,
-  "carbs_per_100g": углеводы_на_100г
+  "total_calories": общие_калории_всего_блюда,
+  "total_protein": общие_белки_всего_блюда_в_граммах,
+  "total_fat": общие_жиры_всего_блюда_в_граммах,
+  "total_carbs": общие_углеводы_всего_блюда_в_граммах
 }`
         }
       ],
@@ -132,18 +135,17 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
     // Parse JSON response
     const analysis = JSON.parse(content);
     
-    // Calculate total values based on weight
+    // Use total values directly (no need to multiply)
     const weight = analysis.weight || 100;
-    const multiplier = weight / 100;
 
     return {
       name: analysis.name || 'Неизвестное блюдо',
       ingredients: analysis.ingredients || [],
       weight: weight,
-      calories: Math.round((analysis.calories_per_100g || 0) * multiplier),
-      protein: Math.round((analysis.protein_per_100g || 0) * multiplier * 10) / 10,
-      fat: Math.round((analysis.fat_per_100g || 0) * multiplier * 10) / 10,
-      carbs: Math.round((analysis.carbs_per_100g || 0) * multiplier * 10) / 10,
+      calories: Math.round(analysis.total_calories || 0),
+      protein: Math.round((analysis.total_protein || 0) * 10) / 10,
+      fat: Math.round((analysis.total_fat || 0) * 10) / 10,
+      carbs: Math.round((analysis.total_carbs || 0) * 10) / 10,
     };
 
   } catch (error) {
@@ -207,7 +209,7 @@ ${userProfile ? `Профиль пользователя:
     });
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: config.openai.model,
       messages,
       max_tokens: 500,
       temperature: 0.7,
@@ -251,7 +253,7 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
 Дай анализ результатов и рекомендации.`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: config.openai.model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

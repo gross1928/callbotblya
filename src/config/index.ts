@@ -12,7 +12,8 @@ export const config = {
   // OpenAI
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-    model: 'gpt-4-vision-preview',
+    model: 'gpt-4o-mini',
+    visionModel: 'gpt-4o-mini',
     maxTokens: 1000,
   },
 
