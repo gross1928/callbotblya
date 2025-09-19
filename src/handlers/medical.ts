@@ -68,7 +68,7 @@ export async function handleMedicalTextInput(ctx: CustomContext, text: string): 
     // Save to database
     const entry = {
       user_id: ctx.user.id,
-      type: medicalData.type,
+      type: medicalData.type as any,
       date: medicalData.date || new Date().toISOString().split('T')[0],
       data: medicalData.data,
       analysis: analysis.analysis,

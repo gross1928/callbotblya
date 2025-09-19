@@ -108,6 +108,8 @@ export interface BotContext {
   tempData?: Record<string, any>;
 }
 
+export type CustomContext = any;
+
 // Utility Types
 export interface ProgressBar {
   current: number;

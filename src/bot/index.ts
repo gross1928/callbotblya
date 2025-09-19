@@ -30,7 +30,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
 
   try {
     const user = await getUserByTelegramId(telegramId);
-    ctx.user = user;
+    ctx.user = user || undefined;
     ctx.isNewUser = !user;
   } catch (error) {
     console.error('Error loading user:', error);
@@ -164,38 +164,42 @@ bot.on('document', async (ctx: CustomContext) => {
 // Handle text messages during registration
 bot.on('text', async (ctx: CustomContext) => {
   // If user is in registration process, handle profile step
-  if (ctx.currentStep && ctx.currentStep.startsWith('name') || 
+  if (ctx.currentStep && (ctx.currentStep.startsWith('name') || 
       ctx.currentStep === 'age' || 
       ctx.currentStep === 'height' || 
       ctx.currentStep === 'weight' || 
       ctx.currentStep === 'target_weight' || 
-      ctx.currentStep === 'target_date') {
-    await handleProfileStep(ctx, ctx.message?.text || '');
+      ctx.currentStep === 'target_date')) {
+    const text = (ctx.message as any)?.text || '';
+    await handleProfileStep(ctx, text);
     return;
   }
 
   // Handle AI coach messages
   if (ctx.currentStep === 'ai_coach') {
-    await handleAICoachMessageWrapper(ctx, ctx.message?.text || '');
+    const text = (ctx.message as any)?.text || '';
+    await handleAICoachMessageWrapper(ctx, text);
     return;
   }
 
   // Handle food text input
   if (ctx.currentStep === 'food_text') {
-    await handleFoodTextInput(ctx, ctx.message?.text || '');
+    const text = (ctx.message as any)?.text || '';
+    await handleFoodTextInput(ctx, text);
     return;
   }
 
   // Handle medical text input
   if (ctx.currentStep === 'medical_upload') {
-    await handleMedicalTextInput(ctx, ctx.message?.text || '');
+    const text = (ctx.message as any)?.text || '';
+    await handleMedicalTextInput(ctx, text);
     return;
   }
 });
 
 // Handle callback queries (button presses)
 bot.on('callback_query', async (ctx: CustomContext) => {
-  const callbackData = ctx.callbackQuery.data;
+  const callbackData = (ctx.callbackQuery as any)?.data;
   
   if (!callbackData) return;
 
