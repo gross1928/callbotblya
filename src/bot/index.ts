@@ -32,6 +32,14 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     const user = await getUserByTelegramId(telegramId);
     ctx.user = user || undefined;
     ctx.isNewUser = !user;
+    
+    // Initialize tempData and currentStep if they don't exist
+    if (!ctx.tempData) {
+      ctx.tempData = {};
+    }
+    if (!ctx.currentStep) {
+      ctx.currentStep = undefined;
+    }
   } catch (error) {
     console.error('Error loading user:', error);
   }
@@ -163,6 +171,12 @@ bot.on('document', async (ctx: CustomContext) => {
 
 // Handle text messages during registration
 bot.on('text', async (ctx: CustomContext) => {
+  console.log('Text message received:', { 
+    currentStep: ctx.currentStep, 
+    hasTempData: !!ctx.tempData,
+    text: (ctx.message as any)?.text?.substring(0, 50) 
+  });
+  
   // If user is in registration process, handle profile step
   if (ctx.currentStep && (ctx.currentStep.startsWith('name') || 
       ctx.currentStep === 'age' || 

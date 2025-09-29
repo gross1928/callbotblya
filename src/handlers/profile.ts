@@ -30,7 +30,14 @@ const goals: { [key: string]: UserGoal } = {
 };
 
 export async function handleProfileStep(ctx: CustomContext, message: string): Promise<void> {
+  console.log('handleProfileStep called:', { 
+    currentStep: ctx.currentStep, 
+    hasTempData: !!ctx.tempData,
+    message: message.substring(0, 50) 
+  });
+  
   if (!ctx.currentStep || !ctx.tempData) {
+    console.log('Missing currentStep or tempData, returning');
     return;
   }
 
