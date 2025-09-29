@@ -12,7 +12,7 @@ interface ProfileData {
   activityLevel?: ActivityLevel;
   goal?: UserGoal;
   targetWeight?: number;
-  targetDate?: string;
+  targetDate?: number;
 }
 
 const activityLevels: { [key: string]: ActivityLevel } = {
@@ -291,7 +291,7 @@ async function handleTargetDate(ctx: CustomContext, message: string, data: Profi
     return;
   }
 
-  data.targetDate = months.toString();
+  data.targetDate = months;
   ctx.tempData = data;
 
   await finishProfileRegistration(ctx, data);

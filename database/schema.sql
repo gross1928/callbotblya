@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     activity_level VARCHAR(20) NOT NULL CHECK (activity_level IN ('sedentary', 'light', 'moderate', 'active', 'very_active')),
     goal VARCHAR(20) NOT NULL CHECK (goal IN ('lose', 'maintain', 'gain')),
     target_weight DECIMAL(5,2),
-    target_date DATE,
+    target_date INTEGER,
     bmr DECIMAL(8,2) NOT NULL,
     tdee DECIMAL(8,2) NOT NULL,
     target_calories INTEGER NOT NULL,

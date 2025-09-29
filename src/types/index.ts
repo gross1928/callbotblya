@@ -10,7 +10,7 @@ export interface UserProfile {
   activity_level: ActivityLevel;
   goal: UserGoal;
   target_weight?: number;
-  target_date?: string;
+  target_date?: number;
   bmr: number;
   tdee: number;
   target_calories: number;
