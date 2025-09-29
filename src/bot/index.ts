@@ -41,7 +41,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     if (session) {
       ctx.currentStep = session.currentStep;
       ctx.tempData = session.tempData || {};
-      console.log(`[Middleware] Session found, tempData keys:`, Object.keys(ctx.tempData));
+      console.log(`[Middleware] Session found, tempData keys:`, Object.keys(ctx.tempData || {}));
     } else {
       ctx.currentStep = undefined;
       ctx.tempData = {};
