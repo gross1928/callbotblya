@@ -27,6 +27,8 @@ export async function handleFoodPhotoAnalysis(ctx: CustomContext): Promise<void>
     // Analyze food using OpenAI Vision API
     const analysis = await analyzeFoodFromPhoto(fileUrl);
     
+    console.log(`[handleFoodPhotoAnalysis] Analysis completed:`, analysis);
+    
     // Show analysis results
     await showFoodAnalysis(ctx, analysis);
 
@@ -50,6 +52,8 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
 
     // Analyze food using OpenAI text API
     const analysis = await analyzeFoodFromText(text);
+    
+    console.log(`[handleFoodTextAnalysis] Analysis completed:`, analysis);
     
     // Show analysis results
     await showFoodAnalysis(ctx, analysis);
