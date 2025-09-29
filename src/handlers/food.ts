@@ -2,6 +2,7 @@ import { Context } from 'telegraf';
 import { analyzeFoodFromPhoto, analyzeFoodFromText } from '../utils/openai';
 import { addFoodEntry } from '../database/queries';
 import { formatCalories, formatMacros } from '../utils/calculations';
+import { updateDashboardMessage } from './dashboard';
 import type { CustomContext, FoodAnalysis, MealType } from '../types';
 
 /**
@@ -120,24 +121,11 @@ export async function saveFoodEntry(ctx: CustomContext, mealType: MealType, anal
 
     await addFoodEntry(entry);
 
-    const mealTypeText = getMealTypeText(mealType);
-    const successMessage = `
-✅ <b>${mealTypeText} добавлен!</b>
-
-🍎 ${analysis.name} (${analysis.weight}г)
-${formatCalories(analysis.calories)} | ${formatMacros({ protein: analysis.protein, fat: analysis.fat, carbs: analysis.carbs })}
-    `;
-
-    const keyboard = {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📊 Дашборд', callback_data: 'dashboard' }],
-          [{ text: '🍎 Добавить еще еду', callback_data: 'add_food' }],
-        ],
-      },
-    };
-
-    await ctx.replyWithHTML(successMessage, keyboard);
+    // Update dashboard instead of showing success message
+    await updateDashboardMessage(ctx);
+    
+    // Show quick confirmation
+    await ctx.answerCbQuery(`✅ ${getMealTypeText(mealType)} добавлен!`);
 
   } catch (error) {
     console.error('Error saving food entry:', error);

@@ -1,10 +1,10 @@
 import { Context } from 'telegraf';
 import { addWaterEntry, getWaterEntriesByDate } from '../database/queries';
-import { calculateProgress, generateProgressBar, formatWater } from '../utils/calculations';
+import { calculateProgress, generateWaterProgressBar, formatWater } from '../utils/calculations';
 import type { CustomContext } from '../types';
 
 /**
- * Add water entry
+ * Add water entry and update message
  */
 export async function addWater(ctx: CustomContext, amount: number): Promise<void> {
   try {
@@ -21,22 +21,41 @@ export async function addWater(ctx: CustomContext, amount: number): Promise<void
 
     await addWaterEntry(entry);
 
+    // Update the water menu message
+    await updateWaterMenuMessage(ctx);
+
+  } catch (error) {
+    console.error('Error adding water:', error);
+    await ctx.reply('❌ Не удалось добавить воду. Попробуй еще раз.');
+  }
+}
+
+/**
+ * Update water menu message with current data
+ */
+export async function updateWaterMenuMessage(ctx: CustomContext): Promise<void> {
+  try {
+    if (!ctx.user) {
+      return;
+    }
+
     // Get today's water data
     const today = new Date().toISOString().split('T')[0];
     const todayEntries = await getWaterEntriesByDate(ctx.user.id, today);
     const totalToday = todayEntries.reduce((sum, entry) => sum + entry.amount, 0);
-    const target = 2000; // Default target, could be user-configurable
+    const target = 2000; // Default target
     const progress = calculateProgress(totalToday, target);
 
-    const successMessage = `
-💧 <b>Вода добавлена!</b>
+    const waterText = `
+💧 <b>Отслеживание воды</b>
 
-Добавлено: ${formatWater(amount)}
-Всего сегодня: ${formatWater(totalToday)}/${formatWater(target)} (${progress}%)
+Сегодня: ${formatWater(totalToday)}/${formatWater(target)} (${progress}%)
 
-${generateProgressBar(progress)}
+${generateWaterProgressBar(progress)}
 
 ${getWaterMotivation(progress)}
+
+Выберите количество для добавления:
     `;
 
     const keyboard = {
@@ -51,18 +70,29 @@ ${getWaterMotivation(progress)}
             { text: '🍼 750мл', callback_data: 'water_750' },
           ],
           [
+            { text: '📋 История воды', callback_data: 'water_history' },
             { text: '📊 Дашборд', callback_data: 'dashboard' },
+          ],
+          [
             { text: '🔙 Главное меню', callback_data: 'main_menu' },
           ],
         ],
       },
     };
 
-    await ctx.replyWithHTML(successMessage, keyboard);
+    // Edit the message instead of sending new one
+    if (ctx.callbackQuery && ctx.callbackQuery.message) {
+      await ctx.editMessageText(waterText, { 
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup 
+      });
+      await ctx.answerCbQuery(`💧 Вода добавлена!`);
+    } else {
+      await ctx.replyWithHTML(waterText, keyboard);
+    }
 
   } catch (error) {
-    console.error('Error adding water:', error);
-    await ctx.reply('❌ Не удалось добавить воду. Попробуй еще раз.');
+    console.error('Error updating water menu:', error);
   }
 }
 
@@ -84,15 +114,15 @@ export async function showWaterMenu(ctx: CustomContext): Promise<void> {
     const progress = calculateProgress(totalToday, target);
 
     const waterText = `
-💧 <b>Трекинг воды</b>
+💧 <b>Отслеживание воды</b>
 
-Сегодня выпито: ${formatWater(totalToday)}/${formatWater(target)} (${progress}%)
+Сегодня: ${formatWater(totalToday)}/${formatWater(target)} (${progress}%)
 
-${generateProgressBar(progress)}
+${generateWaterProgressBar(progress)}
 
 ${getWaterMotivation(progress)}
 
-Выбери количество для добавления:
+Выберите количество для добавления:
     `;
 
     const keyboard = {

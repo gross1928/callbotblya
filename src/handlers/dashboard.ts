@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { getDashboardData } from '../database/queries';
-import { calculateProgress, generateProgressBar, formatCalories, formatMacros, formatWater } from '../utils/calculations';
+import { calculateProgress, generateFoodProgressBar, generateWaterProgressBar, generateMacroProgressBar, formatCalories, formatMacros, formatWater } from '../utils/calculations';
 import type { CustomContext, DashboardData } from '../types';
 
 /**
@@ -25,6 +25,25 @@ export async function showDashboard(ctx: CustomContext): Promise<void> {
 }
 
 /**
+ * Update dashboard message with current data
+ */
+export async function updateDashboardMessage(ctx: CustomContext): Promise<void> {
+  try {
+    if (!ctx.user) {
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const dashboardData = await getDashboardData(ctx.user.id, today);
+
+    await displayDashboard(ctx, dashboardData);
+
+  } catch (error) {
+    console.error('Error updating dashboard:', error);
+  }
+}
+
+/**
  * Display dashboard data with progress bars
  */
 async function displayDashboard(ctx: CustomContext, data: DashboardData): Promise<void> {
@@ -38,11 +57,11 @@ async function displayDashboard(ctx: CustomContext, data: DashboardData): Promis
   const waterProgress = calculateProgress(water.consumed, water.target);
 
   // Generate progress bars
-  const caloriesBar = generateProgressBar(caloriesProgress);
-  const proteinBar = generateProgressBar(proteinProgress);
-  const fatBar = generateProgressBar(fatProgress);
-  const carbsBar = generateProgressBar(carbsProgress);
-  const waterBar = generateProgressBar(waterProgress);
+  const caloriesBar = generateFoodProgressBar(caloriesProgress);
+  const proteinBar = generateMacroProgressBar(proteinProgress, 'red');
+  const fatBar = generateMacroProgressBar(fatProgress, 'yellow');
+  const carbsBar = generateMacroProgressBar(carbsProgress, 'blue');
+  const waterBar = generateWaterProgressBar(waterProgress);
 
   // Determine emojis based on progress
   const caloriesEmoji = caloriesProgress >= 100 ? '🎯' : caloriesProgress >= 80 ? '📈' : '📊';
@@ -93,7 +112,20 @@ ${getMotivationalMessage(caloriesProgress, waterProgress)}
     },
   };
 
-  await ctx.replyWithHTML(dashboardText, keyboard);
+  // Edit message if it's a callback query, otherwise send new message
+  if (ctx.callbackQuery && ctx.callbackQuery.message) {
+    try {
+      await ctx.editMessageText(dashboardText, { 
+        parse_mode: 'HTML',
+        reply_markup: keyboard.reply_markup 
+      });
+    } catch (error) {
+      // If edit fails, send new message
+      await ctx.replyWithHTML(dashboardText, keyboard);
+    }
+  } else {
+    await ctx.replyWithHTML(dashboardText, keyboard);
+  }
 }
 
 /**

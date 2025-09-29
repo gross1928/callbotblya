@@ -125,6 +125,49 @@ export function generateProgressBar(percentage: number, length: number = 10): st
 }
 
 /**
+ * Generate water progress bar with bricks
+ */
+export function generateWaterProgressBar(percentage: number, length: number = 20): string {
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
+  
+  return '🟩'.repeat(filled) + '⬜'.repeat(empty);
+}
+
+/**
+ * Generate food progress bar with bricks
+ */
+export function generateFoodProgressBar(percentage: number, length: number = 15): string {
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
+  
+  return '🟩'.repeat(filled) + '⬜'.repeat(empty);
+}
+
+/**
+ * Generate macro progress bar with colored bricks
+ */
+export function generateMacroProgressBar(percentage: number, color: 'red' | 'blue' | 'yellow', length: number = 12): string {
+  const filled = Math.round((percentage / 100) * length);
+  const empty = length - filled;
+  
+  let filledEmoji = '';
+  switch (color) {
+    case 'red':
+      filledEmoji = '🟥'; // Protein
+      break;
+    case 'blue':
+      filledEmoji = '🟦'; // Carbs
+      break;
+    case 'yellow':
+      filledEmoji = '🟨'; // Fat
+      break;
+  }
+  
+  return filledEmoji.repeat(filled) + '⬜'.repeat(empty);
+}
+
+/**
  * Format weight for display
  */
 export function formatWeight(weight: number): string {
