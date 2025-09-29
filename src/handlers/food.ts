@@ -106,6 +106,7 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
       console.log(`[showFoodAnalysis] ctx.tempData after update:`, ctx.tempData);
       
       // Don't set currentStep to avoid interfering with other operations
+      console.log(`[showFoodAnalysis] About to call saveUserSession`);
       await saveUserSession(ctx.from!.id, existingSession?.currentStep, tempData);
       console.log(`[showFoodAnalysis] Analysis saved successfully to database`);
       
@@ -115,6 +116,7 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
       
     } catch (error) {
       console.error('Error saving food analysis to database:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
     }
 
     console.log(`[showFoodAnalysis] About to create analysis text and keyboard`);
