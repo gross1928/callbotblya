@@ -189,7 +189,7 @@ export async function showWaterHistory(ctx: CustomContext): Promise<void> {
     const progress = calculateProgress(totalAmount, target);
 
     historyText += `\n<b>Всего сегодня:</b> ${formatWater(totalAmount)}/${formatWater(target)} (${progress}%)\n`;
-    historyText += `${generateProgressBar(progress)}\n`;
+    historyText += `${generateWaterProgressBar(progress)}\n`;
     historyText += getWaterMotivation(progress);
 
     const keyboard = {
@@ -258,7 +258,7 @@ export async function showWaterStats(ctx: CustomContext): Promise<void> {
 <b>Цель:</b> ${formatWater(2000)}
 <b>Прогресс:</b> ${calculateProgress(totalToday, 2000)}%
 
-${generateProgressBar(calculateProgress(totalToday, 2000))}
+${generateWaterProgressBar(calculateProgress(totalToday, 2000))}
 
 💡 <b>Советы:</b>
 • Пей воду сразу после пробуждения
