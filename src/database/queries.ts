@@ -253,20 +253,27 @@ export async function getUserSession(telegramId: number): Promise<{currentStep?:
 export async function saveUserSession(telegramId: number, currentStep?: string, tempData?: any): Promise<void> {
   console.log(`[saveUserSession] Saving session for telegramId: ${telegramId}, currentStep: ${currentStep}`);
   console.log(`[saveUserSession] tempData:`, tempData);
+  console.log(`[saveUserSession] tempData type:`, typeof tempData);
+  console.log(`[saveUserSession] tempData keys:`, tempData ? Object.keys(tempData) : 'tempData is null/undefined');
   
-  const { error } = await db
-    .from('user_sessions')
-    .upsert({
-      telegram_id: telegramId,
-      current_step: currentStep,
-      temp_data: tempData,
-      updated_at: new Date().toISOString()
-    });
+  try {
+    const { error } = await db
+      .from('user_sessions')
+      .upsert({
+        telegram_id: telegramId,
+        current_step: currentStep,
+        temp_data: tempData,
+        updated_at: new Date().toISOString()
+      });
 
-  if (error) {
-    console.error('Error saving user session:', error);
-  } else {
-    console.log(`[saveUserSession] Session saved successfully`);
+    if (error) {
+      console.error('Error saving user session:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+    } else {
+      console.log(`[saveUserSession] Session saved successfully`);
+    }
+  } catch (err) {
+    console.error('Exception in saveUserSession:', err);
   }
 }
 
