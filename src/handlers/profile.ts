@@ -108,6 +108,9 @@ async function handleAge(ctx: CustomContext, message: string, data: ProfileData)
   ctx.tempData = data;
   ctx.currentStep = 'gender';
 
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'gender', data);
+
   const keyboard = {
     reply_markup: {
       inline_keyboard: [
@@ -130,6 +133,9 @@ export async function handleGenderCallback(ctx: CustomContext, gender: 'male' | 
   ctx.tempData = data;
   ctx.currentStep = 'height';
 
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'height', data);
+
   await ctx.reply(
     'Отлично! Теперь укажи свой рост в сантиметрах.\n\n' +
     'Например: 175'
@@ -148,6 +154,9 @@ async function handleHeight(ctx: CustomContext, message: string, data: ProfileDa
   ctx.tempData = data;
   ctx.currentStep = 'weight';
 
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'weight', data);
+
   await ctx.reply(
     'Отлично! Теперь укажи свой текущий вес в килограммах.\n\n' +
     'Например: 70.5'
@@ -165,6 +174,9 @@ async function handleWeight(ctx: CustomContext, message: string, data: ProfileDa
   data.weight = weight;
   ctx.tempData = data;
   ctx.currentStep = 'activity';
+
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'activity', data);
 
   const keyboard = {
     reply_markup: {
@@ -201,6 +213,9 @@ export async function handleActivityCallback(ctx: CustomContext, activityKey: st
   ctx.tempData = data;
   ctx.currentStep = 'goal';
 
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'goal', data);
+
   const keyboard = {
     reply_markup: {
       inline_keyboard: [
@@ -235,6 +250,9 @@ export async function handleGoalCallback(ctx: CustomContext, goalKey: string): P
 
   if (goal === 'lose' || goal === 'gain') {
     ctx.currentStep = 'target_weight';
+    // Save session state to database
+    await saveUserSession(ctx.from!.id, 'target_weight', data);
+    
     await ctx.reply(
       'Укажи желаемый вес в килограммах.\n\n' +
       'Например: 65'
@@ -255,6 +273,9 @@ async function handleTargetWeight(ctx: CustomContext, message: string, data: Pro
   data.targetWeight = targetWeight;
   ctx.tempData = data;
   ctx.currentStep = 'target_date';
+
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'target_date', data);
 
   await ctx.reply(
     'За какой период хочешь достичь этого веса? (в месяцах)\n\n' +
