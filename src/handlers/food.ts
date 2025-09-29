@@ -73,9 +73,9 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
     const analysisId = `food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     console.log(`[showFoodAnalysis] Starting with analysisId: ${analysisId}`);
-    console.log(`[showFoodAnalysis] Analysis data:`, analysis);
-    console.log(`[showFoodAnalysis] ctx.foodAnalyses before:`, ctx.foodAnalyses);
-    console.log(`[showFoodAnalysis] ctx.tempData before:`, ctx.tempData);
+    console.log(`[showFoodAnalysis] Analysis data:`, JSON.stringify(analysis));
+    console.log(`[showFoodAnalysis] ctx.foodAnalyses size before:`, ctx.foodAnalyses?.size || 0);
+    console.log(`[showFoodAnalysis] ctx.tempData keys before:`, ctx.tempData ? Object.keys(ctx.tempData) : 'undefined');
     
     // Store analysis in context and database
     if (ctx.foodAnalyses) {
@@ -102,8 +102,8 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
       ctx.tempData[analysisId] = analysis;
       
       console.log(`[showFoodAnalysis] Saving analysis with ID: ${analysisId} to database`);
-      console.log(`[showFoodAnalysis] tempData before save:`, tempData);
-      console.log(`[showFoodAnalysis] ctx.tempData after update:`, ctx.tempData);
+      console.log(`[showFoodAnalysis] tempData keys before save:`, Object.keys(tempData));
+      console.log(`[showFoodAnalysis] ctx.tempData keys after update:`, Object.keys(ctx.tempData));
       
       // Don't set currentStep to avoid interfering with other operations
       console.log(`[showFoodAnalysis] About to call saveUserSession`);
@@ -112,7 +112,10 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
       
       // Verify the save worked
       const verifySession = await getUserSession(ctx.from!.id);
-      console.log(`[showFoodAnalysis] Verification - session after save:`, verifySession);
+      console.log(`[showFoodAnalysis] Verification - session after save:`, {
+        currentStep: verifySession?.currentStep,
+        tempDataKeys: verifySession?.tempData ? Object.keys(verifySession.tempData) : 'undefined'
+      });
       
     } catch (error) {
       console.error('Error saving food analysis to database:', error);

@@ -252,29 +252,35 @@ export async function getUserSession(telegramId: number): Promise<{currentStep?:
 
 export async function saveUserSession(telegramId: number, currentStep?: string, tempData?: any): Promise<void> {
   console.log(`[saveUserSession] Saving session for telegramId: ${telegramId}, currentStep: ${currentStep}`);
-  console.log(`[saveUserSession] tempData:`, tempData);
-  console.log(`[saveUserSession] tempData type:`, typeof tempData);
-  console.log(`[saveUserSession] tempData keys:`, tempData ? Object.keys(tempData) : 'tempData is null/undefined');
   
+  // Безопасное логирование tempData
   try {
-    const { error } = await db
-      .from('user_sessions')
-      .upsert({
-        telegram_id: telegramId,
-        current_step: currentStep,
-        temp_data: tempData,
-        updated_at: new Date().toISOString()
-      });
-
-    if (error) {
-      console.error('Error saving user session:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-    } else {
-      console.log(`[saveUserSession] Session saved successfully`);
-    }
-  } catch (err) {
-    console.error('Exception in saveUserSession:', err);
+    const tempDataSummary = tempData ? {
+      keys: Object.keys(tempData),
+      size: JSON.stringify(tempData).length,
+      type: typeof tempData
+    } : 'null/undefined';
+    console.log(`[saveUserSession] tempData summary:`, tempDataSummary);
+  } catch (logErr) {
+    console.log(`[saveUserSession] tempData: [unable to stringify]`);
   }
+  
+  const { error } = await db
+    .from('user_sessions')
+    .upsert({
+      telegram_id: telegramId,
+      current_step: currentStep,
+      temp_data: tempData || {},
+      updated_at: new Date().toISOString()
+    });
+
+  if (error) {
+    console.error('Error saving user session:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    throw new Error(`Failed to save user session: ${error.message}`);
+  }
+  
+  console.log(`[saveUserSession] Session saved successfully`);
 }
 
 export async function clearUserSession(telegramId: number): Promise<void> {
