@@ -119,7 +119,7 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
 
     console.log(`[showFoodAnalysis] About to create analysis text and keyboard`);
 
-  const analysisText = `
+    const analysisText = `
 🍎 <b>Анализ еды</b>
 
 <b>Блюдо:</b> ${analysis.name}
@@ -135,24 +135,28 @@ ${analysis.sugar ? `• Сахар: ${analysis.sugar}г` : ''}
 Сохранить этот прием пищи?
   `;
 
-  const keyboard = {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '🌅 Завтрак', callback_data: `save_food_breakfast_${analysisId}` },
-          { text: '🌞 Обед', callback_data: `save_food_lunch_${analysisId}` },
+    console.log(`[showFoodAnalysis] Analysis text created successfully`);
+
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '🌅 Завтрак', callback_data: `save_food_breakfast_${analysisId}` },
+            { text: '🌞 Обед', callback_data: `save_food_lunch_${analysisId}` },
+          ],
+          [
+            { text: '🌙 Ужин', callback_data: `save_food_dinner_${analysisId}` },
+            { text: '🍪 Перекус', callback_data: `save_food_snack_${analysisId}` },
+          ],
+          [
+            { text: '✏️ Изменить', callback_data: `edit_food_${analysisId}` },
+            { text: '❌ Отмена', callback_data: 'cancel_food' },
+          ],
         ],
-        [
-          { text: '🌙 Ужин', callback_data: `save_food_dinner_${analysisId}` },
-          { text: '🍪 Перекус', callback_data: `save_food_snack_${analysisId}` },
-        ],
-        [
-          { text: '✏️ Изменить', callback_data: `edit_food_${analysisId}` },
-          { text: '❌ Отмена', callback_data: 'cancel_food' },
-        ],
-      ],
-    },
-  };
+      },
+    };
+
+    console.log(`[showFoodAnalysis] Keyboard created successfully`);
 
     await ctx.replyWithHTML(analysisText, keyboard);
     console.log(`[showFoodAnalysis] Message sent successfully`);
