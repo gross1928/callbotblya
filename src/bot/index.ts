@@ -277,10 +277,8 @@ async function showProfile(ctx: CustomContext) {
 <b>Активность:</b> ${getActivityLevelText(profile.activity_level)}
 <b>Цель:</b> ${getGoalText(profile.goal)}
 
-<b>Расчеты:</b>
-• BMR: ${profile.bmr} ккал
-• TDEE: ${profile.tdee} ккал
-• Целевые калории: ${profile.target_calories} ккал
+🎯 <b>Твои цели на день:</b>
+• Калории: ${profile.target_calories} ккал
 • Белки: ${profile.target_protein}г | Жиры: ${profile.target_fat}г | Углеводы: ${profile.target_carbs}г
   `;
 

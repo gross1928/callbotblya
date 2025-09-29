@@ -22,14 +22,47 @@ export function calculateTDEE(bmr: number, activityLevel: ActivityLevel): number
 }
 
 /**
- * Calculate target calories based on goal
+ * Calculate target calories based on goal and timeframe
  */
-export function calculateTargetCalories(tdee: number, goal: string): number {
+export function calculateTargetCalories(tdee: number, goal: string, targetDateMonths?: number, targetWeight?: number, currentWeight?: number): number {
+  let deficit = 0;
+  let surplus = 0;
+  
+  if (goal === 'lose' && targetDateMonths && targetWeight && currentWeight) {
+    const weightToLose = currentWeight - targetWeight;
+    const weightLossPerMonth = weightToLose / targetDateMonths;
+    const weightLossPerWeek = weightLossPerMonth / 4.33; // weeks per month
+    
+    // 1kg = ~7700 calories, so for aggressive weight loss
+    deficit = Math.round(weightLossPerWeek * 1100); // 1100 cal per 1kg/week
+    deficit = Math.min(deficit, 1000); // Max 1000 cal deficit for safety
+    deficit = Math.max(deficit, 300); // Min 300 cal deficit
+  } else if (goal === 'gain' && targetDateMonths && targetWeight && currentWeight) {
+    const weightToGain = targetWeight - currentWeight;
+    const weightGainPerMonth = weightToGain / targetDateMonths;
+    const weightGainPerWeek = weightGainPerMonth / 4.33;
+    
+    // 1kg = ~7700 calories, so for muscle gain
+    surplus = Math.round(weightGainPerWeek * 700); // 700 cal per 1kg/week
+    surplus = Math.min(surplus, 800); // Max 800 cal surplus
+    surplus = Math.max(surplus, 200); // Min 200 cal surplus
+  } else {
+    // Fallback to standard values
+    switch (goal) {
+      case 'lose':
+        deficit = 500;
+        break;
+      case 'gain':
+        surplus = 300;
+        break;
+    }
+  }
+  
   switch (goal) {
     case 'lose':
-      return Math.round(tdee - 500); // 500 calorie deficit for ~1kg/week loss
+      return Math.round(tdee - deficit);
     case 'gain':
-      return Math.round(tdee + 300); // 300 calorie surplus for ~0.5kg/week gain
+      return Math.round(tdee + surplus);
     case 'maintain':
     default:
       return tdee;

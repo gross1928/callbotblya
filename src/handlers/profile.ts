@@ -313,7 +313,13 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     });
 
     const tdee = calculateTDEE(bmr, data.activityLevel);
-    const targetCalories = calculateTargetCalories(tdee, data.goal);
+    const targetCalories = calculateTargetCalories(
+      tdee, 
+      data.goal, 
+      data.targetDate, 
+      data.targetWeight, 
+      data.weight
+    );
     const targetMacros = calculateTargetMacros(targetCalories, data.goal);
 
     // Create user profile
@@ -361,10 +367,8 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
 • Активность: ${getActivityLevelText(data.activityLevel)}
 • Цель: ${getGoalText(data.goal)}${targetText}
 
-📊 <b>Твои расчеты:</b>
-• BMR: ${bmr} ккал
-• TDEE: ${tdee} ккал
-• Целевые калории: ${targetCalories} ккал
+🎯 <b>Твои цели на день:</b>
+• Калории: ${targetCalories} ккал
 • Белки: ${targetMacros.protein}г
 • Жиры: ${targetMacros.fat}г
 • Углеводы: ${targetMacros.carbs}г
