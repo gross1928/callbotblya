@@ -76,7 +76,10 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
   try {
     const tempData = ctx.tempData || {};
     tempData[analysisId] = analysis;
+    console.log(`[showFoodAnalysis] Saving analysis with ID: ${analysisId} to database`);
+    console.log(`[showFoodAnalysis] tempData before save:`, tempData);
     await saveUserSession(ctx.from!.id, 'food_analysis', tempData);
+    console.log(`[showFoodAnalysis] Analysis saved successfully`);
   } catch (error) {
     console.error('Error saving food analysis to database:', error);
   }
@@ -129,6 +132,10 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
       return;
     }
 
+    console.log(`[saveFoodEntryById] Attempting to save analysis with ID: ${analysisId}`);
+    console.log(`[saveFoodEntryById] ctx.foodAnalyses:`, ctx.foodAnalyses);
+    console.log(`[saveFoodEntryById] ctx.tempData:`, ctx.tempData);
+
     // Get analysis from context or database
     let analysis = null;
     
@@ -142,6 +149,7 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
     }
     
     if (!analysis) {
+      console.error(`[saveFoodEntryById] Analysis not found for ID: ${analysisId}`);
       await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
       return;
     }

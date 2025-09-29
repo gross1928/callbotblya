@@ -37,6 +37,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     
     // Load session state from database
     const session = await getUserSession(telegramId);
+    console.log(`[Middleware] Loaded session for ${telegramId}:`, session);
     if (session) {
       ctx.currentStep = session.currentStep;
       ctx.tempData = session.tempData || {};
@@ -44,6 +45,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
       ctx.currentStep = undefined;
       ctx.tempData = {};
     }
+    console.log(`[Middleware] ctx.tempData after loading:`, ctx.tempData);
     
     // Initialize food analyses storage and load from database
     ctx.foodAnalyses = new Map();
@@ -55,6 +57,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
         }
       }
     }
+    console.log(`[Middleware] ctx.foodAnalyses after populating:`, ctx.foodAnalyses);
   } catch (error) {
     console.error('Error loading user and session:', error);
     ctx.currentStep = undefined;
