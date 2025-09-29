@@ -68,53 +68,56 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
  * Show food analysis results with action buttons
  */
 async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Promise<void> {
-  // Generate unique ID for this analysis
-  const analysisId = `food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  console.log(`[showFoodAnalysis] Starting with analysisId: ${analysisId}`);
-  console.log(`[showFoodAnalysis] Analysis data:`, analysis);
-  console.log(`[showFoodAnalysis] ctx.foodAnalyses before:`, ctx.foodAnalyses);
-  console.log(`[showFoodAnalysis] ctx.tempData before:`, ctx.tempData);
-  
-  // Store analysis in context and database
-  if (ctx.foodAnalyses) {
-    ctx.foodAnalyses.set(analysisId, analysis);
-    console.log(`[showFoodAnalysis] Added to ctx.foodAnalyses`);
-  } else {
-    console.error(`[showFoodAnalysis] ctx.foodAnalyses is null!`);
-  }
-  
-  // Also save to database for persistence across messages
   try {
-    // Load existing session data to preserve other data
-    const existingSession = await getUserSession(ctx.from!.id);
-    console.log(`[showFoodAnalysis] Existing session loaded:`, existingSession);
+    // Generate unique ID for this analysis
+    const analysisId = `food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const tempData = existingSession?.tempData || {};
-    tempData[analysisId] = analysis;
+    console.log(`[showFoodAnalysis] Starting with analysisId: ${analysisId}`);
+    console.log(`[showFoodAnalysis] Analysis data:`, analysis);
+    console.log(`[showFoodAnalysis] ctx.foodAnalyses before:`, ctx.foodAnalyses);
+    console.log(`[showFoodAnalysis] ctx.tempData before:`, ctx.tempData);
     
-    // Update ctx.tempData to keep it in sync
-    if (!ctx.tempData) {
-      ctx.tempData = {};
-      console.log(`[showFoodAnalysis] Initialized ctx.tempData`);
+    // Store analysis in context and database
+    if (ctx.foodAnalyses) {
+      ctx.foodAnalyses.set(analysisId, analysis);
+      console.log(`[showFoodAnalysis] Added to ctx.foodAnalyses`);
+    } else {
+      console.error(`[showFoodAnalysis] ctx.foodAnalyses is null!`);
     }
-    ctx.tempData[analysisId] = analysis;
     
-    console.log(`[showFoodAnalysis] Saving analysis with ID: ${analysisId} to database`);
-    console.log(`[showFoodAnalysis] tempData before save:`, tempData);
-    console.log(`[showFoodAnalysis] ctx.tempData after update:`, ctx.tempData);
-    
-    // Don't set currentStep to avoid interfering with other operations
-    await saveUserSession(ctx.from!.id, existingSession?.currentStep, tempData);
-    console.log(`[showFoodAnalysis] Analysis saved successfully to database`);
-    
-    // Verify the save worked
-    const verifySession = await getUserSession(ctx.from!.id);
-    console.log(`[showFoodAnalysis] Verification - session after save:`, verifySession);
-    
-  } catch (error) {
-    console.error('Error saving food analysis to database:', error);
-  }
+    // Also save to database for persistence across messages
+    try {
+      // Load existing session data to preserve other data
+      const existingSession = await getUserSession(ctx.from!.id);
+      console.log(`[showFoodAnalysis] Existing session loaded:`, existingSession);
+      
+      const tempData = existingSession?.tempData || {};
+      tempData[analysisId] = analysis;
+      
+      // Update ctx.tempData to keep it in sync
+      if (!ctx.tempData) {
+        ctx.tempData = {};
+        console.log(`[showFoodAnalysis] Initialized ctx.tempData`);
+      }
+      ctx.tempData[analysisId] = analysis;
+      
+      console.log(`[showFoodAnalysis] Saving analysis with ID: ${analysisId} to database`);
+      console.log(`[showFoodAnalysis] tempData before save:`, tempData);
+      console.log(`[showFoodAnalysis] ctx.tempData after update:`, ctx.tempData);
+      
+      // Don't set currentStep to avoid interfering with other operations
+      await saveUserSession(ctx.from!.id, existingSession?.currentStep, tempData);
+      console.log(`[showFoodAnalysis] Analysis saved successfully to database`);
+      
+      // Verify the save worked
+      const verifySession = await getUserSession(ctx.from!.id);
+      console.log(`[showFoodAnalysis] Verification - session after save:`, verifySession);
+      
+    } catch (error) {
+      console.error('Error saving food analysis to database:', error);
+    }
+
+    console.log(`[showFoodAnalysis] About to create analysis text and keyboard`);
 
   const analysisText = `
 🍎 <b>Анализ еды</b>
@@ -151,7 +154,13 @@ ${analysis.sugar ? `• Сахар: ${analysis.sugar}г` : ''}
     },
   };
 
-  await ctx.replyWithHTML(analysisText, keyboard);
+    await ctx.replyWithHTML(analysisText, keyboard);
+    console.log(`[showFoodAnalysis] Message sent successfully`);
+    
+  } catch (error) {
+    console.error(`[showFoodAnalysis] Error in showFoodAnalysis:`, error);
+    await ctx.reply('❌ Произошла ошибка при отображении анализа еды. Попробуй еще раз.');
+  }
 }
 
 /**
