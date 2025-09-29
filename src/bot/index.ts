@@ -161,7 +161,12 @@ bot.on('photo', async (ctx: CustomContext) => {
     return;
   }
 
-  await handleFoodPhoto(ctx);
+  // Check if user is in food photo mode
+  if (ctx.currentStep === 'food_photo') {
+    await handleFoodPhotoInput(ctx);
+  } else {
+    await handleFoodPhotoAnalysis(ctx);
+  }
 });
 
 // Handle document uploads (for medical data)
@@ -342,6 +347,14 @@ async function handleAICoachMessageWrapper(ctx: CustomContext, message: string):
 async function handleFoodTextInput(ctx: CustomContext, text: string): Promise<void> {
   await handleFoodTextAnalysis(ctx, text);
   ctx.currentStep = undefined;
+  await clearUserSession(ctx.from!.id);
+}
+
+// Handle food photo input
+async function handleFoodPhotoInput(ctx: CustomContext): Promise<void> {
+  await handleFoodPhotoAnalysis(ctx);
+  ctx.currentStep = undefined;
+  await clearUserSession(ctx.from!.id);
 }
 
 async function handleCallbackQuery(ctx: CustomContext, data: string) {
@@ -430,10 +443,12 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     case 'food_photo':
       await ctx.reply('📷 Отправь фото еды для анализа');
       ctx.currentStep = 'food_photo';
+      await saveUserSession(ctx.from!.id, 'food_photo', {});
       break;
     case 'food_text':
       await ctx.reply('✍️ Опиши что ты съел (например: "Овсянка 100г с бананом")');
       ctx.currentStep = 'food_text';
+      await saveUserSession(ctx.from!.id, 'food_text', {});
       break;
     case 'water_100':
     case 'water_250':
