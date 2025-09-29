@@ -41,9 +41,11 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     if (session) {
       ctx.currentStep = session.currentStep;
       ctx.tempData = session.tempData || {};
+      console.log(`[Middleware] Session found, tempData keys:`, Object.keys(ctx.tempData));
     } else {
       ctx.currentStep = undefined;
       ctx.tempData = {};
+      console.log(`[Middleware] No session found, initialized empty tempData`);
     }
     console.log(`[Middleware] ctx.tempData after loading:`, ctx.tempData);
     
@@ -54,10 +56,12 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
       for (const [key, value] of Object.entries(ctx.tempData)) {
         if (key.startsWith('food_')) {
           ctx.foodAnalyses.set(key, value);
+          console.log(`[Middleware] Loaded food analysis ${key} into ctx.foodAnalyses`);
         }
       }
     }
     console.log(`[Middleware] ctx.foodAnalyses after populating:`, ctx.foodAnalyses);
+    console.log(`[Middleware] ctx.foodAnalyses size:`, ctx.foodAnalyses.size);
   } catch (error) {
     console.error('Error loading user and session:', error);
     ctx.currentStep = undefined;
