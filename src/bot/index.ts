@@ -2,7 +2,7 @@ import { Telegraf, Context } from 'telegraf';
 import { config, validateConfig } from '../config';
 import { getUserByTelegramId, getUserSession, saveUserSession, clearUserSession } from '../database/queries';
 import { handleProfileStep, handleGenderCallback, handleActivityCallback, handleGoalCallback } from '../handlers/profile';
-import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, handleFoodEdit, showFoodHistory } from '../handlers/food';
+import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, saveFoodEntryById, handleFoodEdit, handleFoodEditById, showFoodHistory } from '../handlers/food';
 import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
 import { addWater, showWaterMenu, showWaterHistory } from '../handlers/water';
 import { handleAICoachMessage, startAICoach, showPopularQuestions, showAITips } from '../handlers/ai-coach';
@@ -15,6 +15,7 @@ interface CustomContext extends Context {
   isNewUser: boolean;
   currentStep?: string;
   tempData?: Record<string, any>;
+  foodAnalyses?: Map<string, any>;
 }
 
 // Create bot instance
@@ -43,6 +44,9 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
       ctx.currentStep = undefined;
       ctx.tempData = {};
     }
+    
+    // Initialize food analyses storage
+    ctx.foodAnalyses = new Map();
   } catch (error) {
     console.error('Error loading user and session:', error);
     ctx.currentStep = undefined;
@@ -383,10 +387,9 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
   if (data.startsWith('save_food_')) {
     const parts = data.split('_');
     const mealType = parts[2] as any;
-    const analysisJson = parts.slice(3).join('_');
+    const analysisId = parts.slice(3).join('_');
     try {
-      const analysis = JSON.parse(analysisJson);
-      await saveFoodEntry(ctx, mealType, analysis);
+      await saveFoodEntryById(ctx, mealType, analysisId);
     } catch (error) {
       await ctx.reply('❌ Ошибка при сохранении еды');
     }
@@ -395,10 +398,9 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
 
   // Handle food editing
   if (data.startsWith('edit_food_')) {
-    const analysisJson = data.replace('edit_food_', '');
+    const analysisId = data.replace('edit_food_', '');
     try {
-      const analysis = JSON.parse(analysisJson);
-      await handleFoodEdit(ctx, analysis);
+      await handleFoodEditById(ctx, analysisId);
     } catch (error) {
       await ctx.reply('❌ Ошибка при редактировании еды');
     }

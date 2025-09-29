@@ -64,6 +64,14 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
  * Show food analysis results with action buttons
  */
 async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Promise<void> {
+  // Generate unique ID for this analysis
+  const analysisId = `food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Store analysis in context
+  if (ctx.foodAnalyses) {
+    ctx.foodAnalyses.set(analysisId, analysis);
+  }
+
   const analysisText = `
 🍎 <b>Анализ еды</b>
 
@@ -84,15 +92,15 @@ ${analysis.sugar ? `• Сахар: ${analysis.sugar}г` : ''}
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '🌅 Завтрак', callback_data: `save_food_breakfast_${JSON.stringify(analysis)}` },
-          { text: '🌞 Обед', callback_data: `save_food_lunch_${JSON.stringify(analysis)}` },
+          { text: '🌅 Завтрак', callback_data: `save_food_breakfast_${analysisId}` },
+          { text: '🌞 Обед', callback_data: `save_food_lunch_${analysisId}` },
         ],
         [
-          { text: '🌙 Ужин', callback_data: `save_food_dinner_${JSON.stringify(analysis)}` },
-          { text: '🍪 Перекус', callback_data: `save_food_snack_${JSON.stringify(analysis)}` },
+          { text: '🌙 Ужин', callback_data: `save_food_dinner_${analysisId}` },
+          { text: '🍪 Перекус', callback_data: `save_food_snack_${analysisId}` },
         ],
         [
-          { text: '✏️ Изменить', callback_data: `edit_food_${JSON.stringify(analysis)}` },
+          { text: '✏️ Изменить', callback_data: `edit_food_${analysisId}` },
           { text: '❌ Отмена', callback_data: 'cancel_food' },
         ],
       ],
@@ -103,7 +111,49 @@ ${analysis.sugar ? `• Сахар: ${analysis.sugar}г` : ''}
 }
 
 /**
- * Save food entry to database
+ * Save food entry to database by analysis ID
+ */
+export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, analysisId: string): Promise<void> {
+  try {
+    if (!ctx.user) {
+      await ctx.reply('❌ Пользователь не найден');
+      return;
+    }
+
+    // Get analysis from context
+    if (!ctx.foodAnalyses || !ctx.foodAnalyses.has(analysisId)) {
+      await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
+      return;
+    }
+
+    const analysis = ctx.foodAnalyses.get(analysisId);
+
+    const entry = {
+      user_id: ctx.user.id,
+      meal_type: mealType,
+      food_data: analysis,
+      timestamp: new Date().toISOString(),
+    };
+
+    await addFoodEntry(entry);
+
+    // Clean up analysis from context
+    ctx.foodAnalyses.delete(analysisId);
+
+    // Update dashboard instead of showing success message
+    await updateDashboardMessage(ctx);
+    
+    // Show quick confirmation
+    await ctx.answerCbQuery(`✅ ${getMealTypeText(mealType)} добавлен!`);
+
+  } catch (error) {
+    console.error('Error saving food entry:', error);
+    await ctx.reply('❌ Не удалось сохранить прием пищи. Попробуй еще раз.');
+  }
+}
+
+/**
+ * Save food entry to database (legacy function)
  */
 export async function saveFoodEntry(ctx: CustomContext, mealType: MealType, analysis: FoodAnalysis): Promise<void> {
   try {
@@ -136,6 +186,24 @@ export async function saveFoodEntry(ctx: CustomContext, mealType: MealType, anal
 /**
  * Handle food editing
  */
+/**
+ * Handle food editing by analysis ID
+ */
+export async function handleFoodEditById(ctx: CustomContext, analysisId: string): Promise<void> {
+  try {
+    if (!ctx.foodAnalyses || !ctx.foodAnalyses.has(analysisId)) {
+      await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
+      return;
+    }
+
+    const analysis = ctx.foodAnalyses.get(analysisId);
+    await handleFoodEdit(ctx, analysis);
+  } catch (error) {
+    console.error('Error editing food:', error);
+    await ctx.reply('❌ Ошибка при редактировании еды');
+  }
+}
+
 export async function handleFoodEdit(ctx: CustomContext, analysis: FoodAnalysis): Promise<void> {
   await ctx.reply(
     '✏️ <b>Редактирование еды</b>\n\n' +
