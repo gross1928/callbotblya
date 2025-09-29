@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { analyzeFoodFromPhoto, analyzeFoodFromText } from '../utils/openai';
-import { addFoodEntry } from '../database/queries';
+import { addFoodEntry, saveUserSession } from '../database/queries';
 import { formatCalories, formatMacros } from '../utils/calculations';
 import { updateDashboardMessage } from './dashboard';
 import type { CustomContext, FoodAnalysis, MealType } from '../types';
@@ -67,9 +67,18 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
   // Generate unique ID for this analysis
   const analysisId = `food_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  // Store analysis in context
+  // Store analysis in context and database
   if (ctx.foodAnalyses) {
     ctx.foodAnalyses.set(analysisId, analysis);
+  }
+  
+  // Also save to database for persistence across messages
+  try {
+    const tempData = ctx.tempData || {};
+    tempData[analysisId] = analysis;
+    await saveUserSession(ctx.from!.id, 'food_analysis', tempData);
+  } catch (error) {
+    console.error('Error saving food analysis to database:', error);
   }
 
   const analysisText = `
@@ -120,13 +129,22 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
       return;
     }
 
-    // Get analysis from context
-    if (!ctx.foodAnalyses || !ctx.foodAnalyses.has(analysisId)) {
+    // Get analysis from context or database
+    let analysis = null;
+    
+    // First try to get from context
+    if (ctx.foodAnalyses && ctx.foodAnalyses.has(analysisId)) {
+      analysis = ctx.foodAnalyses.get(analysisId);
+    }
+    // If not in context, try to get from database
+    else if (ctx.tempData && ctx.tempData[analysisId]) {
+      analysis = ctx.tempData[analysisId];
+    }
+    
+    if (!analysis) {
       await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
       return;
     }
-
-    const analysis = ctx.foodAnalyses.get(analysisId);
 
     const entry = {
       user_id: ctx.user.id,
@@ -137,8 +155,16 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
 
     await addFoodEntry(entry);
 
-    // Clean up analysis from context
-    ctx.foodAnalyses.delete(analysisId);
+    // Clean up analysis from context and database
+    if (ctx.foodAnalyses) {
+      ctx.foodAnalyses.delete(analysisId);
+    }
+    
+    // Remove from database
+    if (ctx.tempData && ctx.tempData[analysisId]) {
+      delete ctx.tempData[analysisId];
+      await saveUserSession(ctx.from!.id, 'food_analysis', ctx.tempData);
+    }
 
     // Update dashboard instead of showing success message
     await updateDashboardMessage(ctx);
@@ -191,12 +217,23 @@ export async function saveFoodEntry(ctx: CustomContext, mealType: MealType, anal
  */
 export async function handleFoodEditById(ctx: CustomContext, analysisId: string): Promise<void> {
   try {
-    if (!ctx.foodAnalyses || !ctx.foodAnalyses.has(analysisId)) {
+    // Get analysis from context or database
+    let analysis = null;
+    
+    // First try to get from context
+    if (ctx.foodAnalyses && ctx.foodAnalyses.has(analysisId)) {
+      analysis = ctx.foodAnalyses.get(analysisId);
+    }
+    // If not in context, try to get from database
+    else if (ctx.tempData && ctx.tempData[analysisId]) {
+      analysis = ctx.tempData[analysisId];
+    }
+    
+    if (!analysis) {
       await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
       return;
     }
 
-    const analysis = ctx.foodAnalyses.get(analysisId);
     await handleFoodEdit(ctx, analysis);
   } catch (error) {
     console.error('Error editing food:', error);

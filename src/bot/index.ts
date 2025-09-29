@@ -45,8 +45,16 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
       ctx.tempData = {};
     }
     
-    // Initialize food analyses storage
+    // Initialize food analyses storage and load from database
     ctx.foodAnalyses = new Map();
+    if (ctx.tempData) {
+      // Load food analyses from tempData
+      for (const [key, value] of Object.entries(ctx.tempData)) {
+        if (key.startsWith('food_')) {
+          ctx.foodAnalyses.set(key, value);
+        }
+      }
+    }
   } catch (error) {
     console.error('Error loading user and session:', error);
     ctx.currentStep = undefined;
