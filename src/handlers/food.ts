@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { analyzeFoodFromPhoto, analyzeFoodFromText } from '../utils/openai';
-import { addFoodEntry, saveUserSession } from '../database/queries';
+import { addFoodEntry, saveUserSession, getUserSession } from '../database/queries';
 import { formatCalories, formatMacros } from '../utils/calculations';
 import { updateDashboardMessage } from './dashboard';
 import type { CustomContext, FoodAnalysis, MealType } from '../types';
@@ -74,11 +74,23 @@ async function showFoodAnalysis(ctx: CustomContext, analysis: FoodAnalysis): Pro
   
   // Also save to database for persistence across messages
   try {
-    const tempData = ctx.tempData || {};
+    // Load existing session data to preserve other data
+    const existingSession = await getUserSession(ctx.from!.id);
+    const tempData = existingSession?.tempData || {};
     tempData[analysisId] = analysis;
+    
+    // Update ctx.tempData to keep it in sync
+    if (!ctx.tempData) {
+      ctx.tempData = {};
+    }
+    ctx.tempData[analysisId] = analysis;
+    
     console.log(`[showFoodAnalysis] Saving analysis with ID: ${analysisId} to database`);
+    console.log(`[showFoodAnalysis] Existing session:`, existingSession);
     console.log(`[showFoodAnalysis] tempData before save:`, tempData);
-    await saveUserSession(ctx.from!.id, 'food_analysis', tempData);
+    
+    // Don't set currentStep to avoid interfering with other operations
+    await saveUserSession(ctx.from!.id, existingSession?.currentStep, tempData);
     console.log(`[showFoodAnalysis] Analysis saved successfully`);
   } catch (error) {
     console.error('Error saving food analysis to database:', error);
@@ -142,17 +154,43 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
     // First try to get from context
     if (ctx.foodAnalyses && ctx.foodAnalyses.has(analysisId)) {
       analysis = ctx.foodAnalyses.get(analysisId);
+      console.log(`[saveFoodEntryById] Found analysis in ctx.foodAnalyses`);
     }
-    // If not in context, try to get from database
+    // If not in context, try to get from tempData
     else if (ctx.tempData && ctx.tempData[analysisId]) {
       analysis = ctx.tempData[analysisId];
+      console.log(`[saveFoodEntryById] Found analysis in ctx.tempData`);
+    }
+    // If still not found, try to reload from database
+    else {
+      console.log(`[saveFoodEntryById] Analysis not found in context, trying to reload from database`);
+      const session = await getUserSession(ctx.from!.id);
+      if (session?.tempData && session.tempData[analysisId]) {
+        analysis = session.tempData[analysisId];
+        console.log(`[saveFoodEntryById] Found analysis in database session`);
+        
+        // Update context to keep it in sync
+        if (!ctx.tempData) {
+          ctx.tempData = {};
+        }
+        ctx.tempData[analysisId] = analysis;
+        
+        if (!ctx.foodAnalyses) {
+          ctx.foodAnalyses = new Map();
+        }
+        ctx.foodAnalyses.set(analysisId, analysis);
+      }
     }
     
     if (!analysis) {
       console.error(`[saveFoodEntryById] Analysis not found for ID: ${analysisId}`);
+      console.error(`[saveFoodEntryById] Available keys in ctx.tempData:`, ctx.tempData ? Object.keys(ctx.tempData) : 'tempData is null');
+      console.error(`[saveFoodEntryById] Available keys in ctx.foodAnalyses:`, ctx.foodAnalyses ? Array.from(ctx.foodAnalyses.keys()) : 'foodAnalyses is null');
       await ctx.reply('❌ Анализ еды не найден. Попробуй еще раз.');
       return;
     }
+
+    console.log(`[saveFoodEntryById] Found analysis:`, analysis);
 
     const entry = {
       user_id: ctx.user.id,
@@ -171,7 +209,7 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
     // Remove from database
     if (ctx.tempData && ctx.tempData[analysisId]) {
       delete ctx.tempData[analysisId];
-      await saveUserSession(ctx.from!.id, 'food_analysis', ctx.tempData);
+      await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
     }
 
     // Update dashboard instead of showing success message
