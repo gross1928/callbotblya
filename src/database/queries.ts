@@ -230,21 +230,30 @@ export async function getDashboardData(userId: string, date: string): Promise<Da
 
 // Session Management Queries
 export async function getUserSession(telegramId: number): Promise<{currentStep?: string, tempData?: any} | null> {
+  console.log(`[getUserSession] Getting session for telegramId: ${telegramId}`);
+  
   const { data, error } = await db
     .from('user_sessions')
     .select('*')
     .eq('telegram_id', telegramId)
     .single();
 
+  console.log(`[getUserSession] Query result:`, { data, error });
+
   if (error && error.code !== 'PGRST116') {
     console.error('Error getting user session:', error);
     return null;
   }
 
-  return data ? { currentStep: data.current_step, tempData: data.temp_data } : null;
+  const result = data ? { currentStep: data.current_step, tempData: data.temp_data } : null;
+  console.log(`[getUserSession] Returning:`, result);
+  return result;
 }
 
 export async function saveUserSession(telegramId: number, currentStep?: string, tempData?: any): Promise<void> {
+  console.log(`[saveUserSession] Saving session for telegramId: ${telegramId}, currentStep: ${currentStep}`);
+  console.log(`[saveUserSession] tempData:`, tempData);
+  
   const { error } = await db
     .from('user_sessions')
     .upsert({
@@ -256,6 +265,8 @@ export async function saveUserSession(telegramId: number, currentStep?: string, 
 
   if (error) {
     console.error('Error saving user session:', error);
+  } else {
+    console.log(`[saveUserSession] Session saved successfully`);
   }
 }
 
