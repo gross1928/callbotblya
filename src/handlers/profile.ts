@@ -1,5 +1,5 @@
 import { Context } from 'telegraf';
-import { createUserProfile } from '../database/queries';
+import { createUserProfile, saveUserSession, clearUserSession } from '../database/queries';
 import { calculateBMR, calculateTDEE, calculateTargetCalories, calculateTargetMacros } from '../utils/calculations';
 import type { CustomContext, UserProfile, ActivityLevel, UserGoal } from '../types';
 
@@ -86,6 +86,9 @@ async function handleName(ctx: CustomContext, message: string, data: ProfileData
   data.name = message.trim();
   ctx.tempData = data;
   ctx.currentStep = 'age';
+
+  // Save session state to database
+  await saveUserSession(ctx.from!.id, 'age', data);
 
   await ctx.reply(
     `Приятно познакомиться, ${data.name}! 😊\n\n` +
@@ -319,6 +322,9 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     ctx.tempData = undefined;
     ctx.user = user;
     ctx.isNewUser = false;
+    
+    // Clear session from database
+    await clearUserSession(ctx.from!.id);
 
     const targetText = data.targetWeight ? `\n<b>Желаемый вес:</b> ${data.targetWeight} кг за ${data.targetDate} месяцев` : '';
     

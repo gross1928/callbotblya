@@ -1,6 +1,6 @@
 import { Telegraf, Context } from 'telegraf';
 import { config, validateConfig } from '../config';
-import { getUserByTelegramId } from '../database/queries';
+import { getUserByTelegramId, getUserSession, saveUserSession, clearUserSession } from '../database/queries';
 import { handleProfileStep, handleGenderCallback, handleActivityCallback, handleGoalCallback } from '../handlers/profile';
 import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, handleFoodEdit, showFoodHistory } from '../handlers/food';
 import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
@@ -20,7 +20,7 @@ interface CustomContext extends Context {
 // Create bot instance
 const bot = new Telegraf<CustomContext>(config.telegram.token);
 
-// Middleware to load user data
+// Middleware to load user data and session
 bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
   const telegramId = ctx.from?.id;
   
@@ -29,19 +29,24 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
   }
 
   try {
+    // Load user profile
     const user = await getUserByTelegramId(telegramId);
     ctx.user = user || undefined;
     ctx.isNewUser = !user;
     
-    // Initialize tempData and currentStep if they don't exist
-    if (!ctx.tempData) {
+    // Load session state from database
+    const session = await getUserSession(telegramId);
+    if (session) {
+      ctx.currentStep = session.currentStep;
+      ctx.tempData = session.tempData || {};
+    } else {
+      ctx.currentStep = undefined;
       ctx.tempData = {};
     }
-    if (!ctx.currentStep) {
-      ctx.currentStep = undefined;
-    }
   } catch (error) {
-    console.error('Error loading user:', error);
+    console.error('Error loading user and session:', error);
+    ctx.currentStep = undefined;
+    ctx.tempData = {};
   }
 
   return next();
@@ -252,6 +257,9 @@ async function startProfileRegistration(ctx: CustomContext) {
   
   ctx.currentStep = 'name';
   ctx.tempData = {};
+  
+  // Save session to database
+  await saveUserSession(ctx.from!.id, 'name', {});
 }
 
 async function showProfile(ctx: CustomContext) {
@@ -492,8 +500,14 @@ export async function startBot(): Promise<void> {
     validateConfig();
     console.log('🤖 Запуск бота "ДаЕда"...');
     
+    // Stop any existing webhook and use polling
+    await bot.telegram.deleteWebhook();
+    console.log('Webhook deleted, starting polling...');
+    
     // Use polling mode for Railway deployment
-    await bot.launch();
+    await bot.launch({
+      dropPendingUpdates: true, // Drop pending updates to avoid conflicts
+    });
     console.log('Bot started with polling');
 
     console.log('✅ Бот успешно запущен!');

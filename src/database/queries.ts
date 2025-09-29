@@ -227,3 +227,45 @@ export async function getDashboardData(userId: string, date: string): Promise<Da
     },
   };
 }
+
+// Session Management Queries
+export async function getUserSession(telegramId: number): Promise<{currentStep?: string, tempData?: any} | null> {
+  const { data, error } = await db
+    .from('user_sessions')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error getting user session:', error);
+    return null;
+  }
+
+  return data ? { currentStep: data.current_step, tempData: data.temp_data } : null;
+}
+
+export async function saveUserSession(telegramId: number, currentStep?: string, tempData?: any): Promise<void> {
+  const { error } = await db
+    .from('user_sessions')
+    .upsert({
+      telegram_id: telegramId,
+      current_step: currentStep,
+      temp_data: tempData,
+      updated_at: new Date().toISOString()
+    });
+
+  if (error) {
+    console.error('Error saving user session:', error);
+  }
+}
+
+export async function clearUserSession(telegramId: number): Promise<void> {
+  const { error } = await db
+    .from('user_sessions')
+    .delete()
+    .eq('telegram_id', telegramId);
+
+  if (error) {
+    console.error('Error clearing user session:', error);
+  }
+}
