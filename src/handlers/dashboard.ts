@@ -14,7 +14,7 @@ export async function showDashboard(ctx: CustomContext): Promise<void> {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const dashboardData = await getDashboardData(ctx.user.id, today);
+    const dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
 
     await displayDashboard(ctx, dashboardData);
 
@@ -34,7 +34,7 @@ export async function updateDashboardMessage(ctx: CustomContext): Promise<void> 
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const dashboardData = await getDashboardData(ctx.user.id, today);
+    const dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
 
     await displayDashboard(ctx, dashboardData);
 
@@ -154,7 +154,7 @@ export async function showNutritionBreakdown(ctx: CustomContext): Promise<void> 
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const dashboardData = await getDashboardData(ctx.user.id, today);
+    const dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
 
     const { calories, macros } = dashboardData;
     const remainingCalories = calories.target - calories.consumed;
