@@ -256,6 +256,13 @@ ${userProfile ? `Профиль пользователя:
       throw new Error('No response from OpenAI');
     }
 
+    // Convert markdown to HTML formatting
+    // Replace **text** with <b>text</b>
+    content = content.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+    
+    // Replace *text* with <i>text</i> (if any)
+    content = content.replace(/\*([^*]+)\*/g, '<i>$1</i>');
+
     // Telegram has a 4096 character limit, but we limit to 2048 for better UX
     const maxLength = 2048;
     if (content.length > maxLength) {
