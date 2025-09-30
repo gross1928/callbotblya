@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { analyzeFoodFromPhoto, analyzeFoodFromText } from '../utils/openai';
-import { addFoodEntry, saveUserSession, getUserSession } from '../database/queries';
+import { addFoodEntry, saveUserSession, getUserSession, clearUserSession } from '../database/queries';
 import { formatCalories, formatMacros } from '../utils/calculations';
 import { updateDashboardMessage } from './dashboard';
 import type { CustomContext, FoodAnalysis, MealType } from '../types';
@@ -239,16 +239,17 @@ export async function saveFoodEntryById(ctx: CustomContext, mealType: MealType, 
 
     await addFoodEntry(entry);
 
-    // Clean up analysis from context and database
+    // Clean up analysis from context
     if (ctx.foodAnalyses) {
       ctx.foodAnalyses.delete(analysisId);
     }
-    
-    // Remove from database
     if (ctx.tempData && ctx.tempData[analysisId]) {
       delete ctx.tempData[analysisId];
-      await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
     }
+    
+    // Clear entire session from database after successful save
+    await clearUserSession(ctx.from!.id);
+    console.log(`[saveFoodEntryById] Session cleared after successful save`);
 
     // Update dashboard instead of showing success message
     await updateDashboardMessage(ctx);
@@ -280,6 +281,10 @@ export async function saveFoodEntry(ctx: CustomContext, mealType: MealType, anal
     };
 
     await addFoodEntry(entry);
+
+    // Clear session from database after successful save
+    await clearUserSession(ctx.from!.id);
+    console.log(`[saveFoodEntry] Session cleared after successful save`);
 
     // Update dashboard instead of showing success message
     await updateDashboardMessage(ctx);

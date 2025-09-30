@@ -375,15 +375,15 @@ async function handleAICoachMessageWrapper(ctx: CustomContext, message: string):
 // Handle food text input
 async function handleFoodTextInput(ctx: CustomContext, text: string): Promise<void> {
   await handleFoodTextAnalysis(ctx, text);
-  ctx.currentStep = undefined;
-  await clearUserSession(ctx.from!.id);
+  // Don't clear session here! We need the tempData for when user clicks meal type button
+  // Session will be cleared after successful save in saveFoodEntryById
 }
 
 // Handle food photo input
 async function handleFoodPhotoInput(ctx: CustomContext): Promise<void> {
   await handleFoodPhotoAnalysis(ctx);
-  ctx.currentStep = undefined;
-  await clearUserSession(ctx.from!.id);
+  // Don't clear session here! We need the tempData for when user clicks meal type button
+  // Session will be cleared after successful save in saveFoodEntryById
 }
 
 async function handleCallbackQuery(ctx: CustomContext, data: string) {
@@ -434,6 +434,7 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
 
   // Handle cancel food
   if (data === 'cancel_food') {
+    await clearUserSession(ctx.from!.id);
     await ctx.reply('❌ Добавление еды отменено');
     ctx.currentStep = undefined;
     return;
