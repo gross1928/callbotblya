@@ -12,8 +12,8 @@ export const config = {
   // OpenAI
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
-    model: 'gpt-4o-mini',
-    visionModel: 'gpt-4o-mini',
+    model: 'gpt-5-nano', // В 3х раза дешевле чем gpt-4o-mini! Input: $0.05/1M, Output: $0.40/1M
+    visionModel: 'gpt-5-nano', // Для анализа фото еды и медицинских данных
     maxTokens: 1000,
   },
 
