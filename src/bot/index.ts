@@ -191,6 +191,12 @@ bot.on('photo', async (ctx: CustomContext) => {
     return;
   }
 
+  // Check if user is uploading medical data
+  if (ctx.currentStep === 'medical_upload') {
+    await ctx.reply('📄 Анализ медицинских фото пока в разработке. Попробуй описать результаты анализов текстом.\n\nПример: "Общий анализ крови: гемоглобин 140 г/л, эритроциты 4.5 млн/мкл"');
+    return;
+  }
+
   // Check if user is in food photo mode
   if (ctx.currentStep === 'food_photo') {
     await handleFoodPhotoInput(ctx);
