@@ -52,10 +52,40 @@ export async function handleMedicalPhotoAnalysis(ctx: CustomContext): Promise<vo
 
     console.log('[handleMedicalPhotoAnalysis] Analysis result:', result.text);
 
+    // Determine analysis type from result
+    let analysisType = 'other';
+    const lowerText = result.text.toLowerCase();
+    if (lowerText.includes('кров')) analysisType = 'blood';
+    else if (lowerText.includes('моч')) analysisType = 'urine';
+    else if (lowerText.includes('гормон')) analysisType = 'hormones';
+
+    // Save to database
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      await addMedicalData({
+        user_id: ctx.user.id,
+        type: analysisType as 'blood' | 'hormones' | 'urine' | 'other',
+        date: today,
+        data: { 
+          source: 'photo',
+          extracted_text: result.text,
+          raw_data: result.data 
+        },
+        analysis: result.text,
+        recommendations: null
+      });
+
+      console.log('[handleMedicalPhotoAnalysis] Medical data saved to database');
+    } catch (saveError) {
+      console.error('[handleMedicalPhotoAnalysis] Error saving to database:', saveError);
+      // Continue to show results even if save fails
+    }
+
     // Show extracted data
     await ctx.replyWithHTML(
       `📋 <b>Распознанные данные из анализа:</b>\n\n${result.text}\n\n` +
-      `<i>Данные извлечены автоматически. Проверь правильность и при необходимости скорректируй.</i>`
+      `<i>✅ Данные сохранены в базу. Проверь правильность и при необходимости скорректируй в разделе "Просмотр данных".</i>`
     );
 
     // Clear step and session
