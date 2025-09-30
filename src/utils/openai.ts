@@ -195,7 +195,8 @@ export async function getAICoachResponse(
   userProfile?: any, 
   chatHistory?: Array<{role: string, content: string}>,
   dashboardData?: any,
-  todayFoodEntries?: any[]
+  todayFoodEntries?: any[],
+  medicalData?: any[]
 ): Promise<string> {
   try {
     const systemPrompt = `Ты персональный AI-коуч по питанию и здоровью. 
@@ -243,6 +244,22 @@ ${todayFoodEntries.map((entry: any, index: number) => {
   return `${index + 1}. ${mealType}: ${food.name} (${food.calories} ккал, Б${food.protein}г Ж${food.fat}г У${food.carbs}г)`;
 }).join('\n')}
 ` : ''}
+${medicalData && medicalData.length > 0 ? `
+Медицинские анализы пользователя (последние данные):
+${medicalData.slice(0, 3).map((item: any, index: number) => {
+  const typeText = item.type === 'blood' ? '🩸 Анализ крови' : 
+                   item.type === 'urine' ? '💧 Анализ мочи' : 
+                   item.type === 'hormones' ? '💊 Гормоны' : '📋 Другое';
+  const dateText = new Date(item.date).toLocaleDateString('ru-RU');
+  return `\n${index + 1}. ${typeText} (${dateText}):\n${item.analysis || 'Нет данных'}`;
+}).join('\n')}
+
+⚠️ ВАЖНО: Учитывай медицинские показатели при советах! 
+Например:
+- Низкий гемоглобин → рекомендуй продукты с железом (печень, гречка, гранат)
+- Высокий холестерин → меньше жирного мяса, больше рыбы
+- Проблемы с щитовидкой → йодсодержащие продукты
+` : ''}
 ВАЖНО: Используй эти данные для персонализированных советов! Например, если спрашивают про воду - говори точные цифры из прогресса.`;
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -270,7 +287,7 @@ ${todayFoodEntries.map((entry: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_tokens: 600, // Increased to allow for ~2000 characters in Russian
+      max_tokens: 700, // Increased for responses with medical context
       temperature: 0.7,
     });
 

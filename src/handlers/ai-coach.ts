@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { getAICoachResponse } from '../utils/openai';
-import { addChatMessage, getChatHistory, getDashboardData, getFoodEntriesByDate } from '../database/queries';
+import { addChatMessage, getChatHistory, getDashboardData, getFoodEntriesByDate, getMedicalDataByUser } from '../database/queries';
 import { editOrReply } from '../utils/telegram';
 import type { CustomContext } from '../types';
 
@@ -37,13 +37,15 @@ export async function handleAICoachMessage(ctx: CustomContext, message: string):
     const today = new Date().toISOString().split('T')[0];
     let dashboardData = undefined;
     let todayFoodEntries = undefined;
+    let medicalData = undefined;
     
     try {
       dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
       todayFoodEntries = await getFoodEntriesByDate(ctx.user.id, today);
+      medicalData = await getMedicalDataByUser(ctx.user.id);
     } catch (error) {
-      console.log('[AI Coach] Could not load dashboard data:', error);
-      // Continue without dashboard data
+      console.log('[AI Coach] Could not load personalization data:', error);
+      // Continue without some data
     }
 
     // Get AI response with personalized data
@@ -52,7 +54,8 @@ export async function handleAICoachMessage(ctx: CustomContext, message: string):
       ctx.user, 
       chatHistory,
       dashboardData,
-      todayFoodEntries
+      todayFoodEntries,
+      medicalData
     );
 
     // Save AI response to database
