@@ -6,7 +6,7 @@ import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, saveFoo
 import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
 import { addWater, showWaterMenu, showWaterHistory } from '../handlers/water';
 import { handleAICoachMessage, startAICoach, showPopularQuestions, showAITips } from '../handlers/ai-coach';
-import { showMedicalMenu, handleMedicalDocumentUpload, handleMedicalTextInput, showMedicalHistory, showMedicalData } from '../handlers/medical';
+import { showMedicalMenu, handleMedicalDocumentUpload, handleMedicalTextInput, showMedicalHistory, showMedicalData, handleMedicalPhotoAnalysis } from '../handlers/medical';
 import { editOrReply } from '../utils/telegram';
 import type { BotContext } from '../types';
 
@@ -193,7 +193,7 @@ bot.on('photo', async (ctx: CustomContext) => {
 
   // Check if user is uploading medical data
   if (ctx.currentStep === 'medical_upload') {
-    await ctx.reply('📄 Анализ медицинских фото пока в разработке. Попробуй описать результаты анализов текстом.\n\nПример: "Общий анализ крови: гемоглобин 140 г/л, эритроциты 4.5 млн/мкл"');
+    await handleMedicalPhotoAnalysis(ctx);
     return;
   }
 

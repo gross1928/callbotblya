@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
-import { addMedicalData, getMedicalDataByUser } from '../database/queries';
-import { analyzeMedicalData } from '../utils/openai';
+import { addMedicalData, getMedicalDataByUser, clearUserSession, saveUserSession } from '../database/queries';
+import { analyzeMedicalData, analyzeMedicalPhoto } from '../utils/openai';
 import { editOrReply } from '../utils/telegram';
 import type { CustomContext, MedicalData } from '../types';
 
@@ -23,6 +23,55 @@ export async function showMedicalMenu(ctx: CustomContext): Promise<void> {
 }
 
 /**
+ * Handle medical photo analysis
+ */
+export async function handleMedicalPhotoAnalysis(ctx: CustomContext): Promise<void> {
+  try {
+    if (!ctx.user) {
+      await ctx.reply('❌ Пользователь не найден');
+      return;
+    }
+
+    if (!ctx.message || !('photo' in ctx.message)) {
+      await ctx.reply('Пожалуйста, отправь фото медицинского анализа.');
+      return;
+    }
+
+    await ctx.reply('📊 Анализирую фото медицинского анализа...');
+
+    // Get the largest photo
+    const photos = ctx.message.photo;
+    const largestPhoto = photos[photos.length - 1];
+    
+    // Get file URL from Telegram
+    const file = await ctx.telegram.getFile(largestPhoto.file_id);
+    const imageUrl = `https://api.telegram.org/file/bot${ctx.telegram.token}/${file.file_path}`;
+
+    // Analyze medical photo
+    const result = await analyzeMedicalPhoto(imageUrl);
+
+    if (result.text.includes('Не удалось распознать')) {
+      await ctx.reply('❌ Не удалось распознать медицинский анализ на фото. Попробуй отправить более четкое фото или опиши результаты текстом.');
+      return;
+    }
+
+    // Show extracted data
+    await ctx.replyWithHTML(
+      `📋 <b>Распознанные данные:</b>\n\n${result.text}\n\n` +
+      `Данные извлечены из фото. Проверь правильность и при необходимости скорректируй вручную.`
+    );
+
+    // Clear step and session
+    ctx.currentStep = undefined;
+    await clearUserSession(ctx.from!.id);
+
+  } catch (error) {
+    console.error('Error analyzing medical photo:', error);
+    await ctx.reply('❌ Не удалось проанализировать фото. Попробуй еще раз или опиши результаты текстом.');
+  }
+}
+
+/**
  * Handle document upload for medical data
  */
 export async function handleMedicalDocumentUpload(ctx: CustomContext): Promise<void> {
@@ -37,6 +86,7 @@ export async function handleMedicalDocumentUpload(ctx: CustomContext): Promise<v
   );
   
   ctx.currentStep = 'medical_upload';
+  await saveUserSession(ctx.from!.id, 'medical_upload', {});
 }
 
 /**

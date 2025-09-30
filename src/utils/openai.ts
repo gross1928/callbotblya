@@ -301,6 +301,68 @@ ${todayFoodEntries.map((entry: any, index: number) => {
 }
 
 /**
+ * Analyze medical photo (extract data from medical test results)
+ */
+export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: string; data: any }> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: config.openai.visionModel,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Проанализируй это фото медицинского анализа (кровь, моча, гормоны и т.д.).
+
+Извлеки все показатели и их значения.
+
+Верни результат в следующем формате (текст, без JSON):
+
+📋 Тип анализа: [название]
+📅 Дата: [если видна]
+
+Показатели:
+• [Название показателя]: [значение] [единицы] [норма если видна]
+• [Название показателя]: [значение] [единицы] [норма если видна]
+...
+
+Если это не медицинский анализ, напиши "Не удалось распознать медицинский анализ"`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('[analyzeMedicalPhoto] OpenAI response:', content);
+
+    // Return extracted text and attempt to parse structured data
+    return {
+      text: content,
+      data: {} // Can add structured parsing later if needed
+    };
+
+  } catch (error) {
+    console.error('Error analyzing medical photo:', error);
+    throw new Error('Не удалось проанализировать фото медицинского анализа.');
+  }
+}
+
+/**
  * Analyze medical data (blood tests, etc.)
  */
 export async function analyzeMedicalData(
