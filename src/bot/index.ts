@@ -248,6 +248,20 @@ bot.on('text', async (ctx: CustomContext) => {
     await handleMedicalTextInput(ctx, text);
     return;
   }
+
+  // Handle all other text messages as AI coach questions
+  // (when no specific step is active)
+  if (!ctx.currentStep) {
+    const text = (ctx.message as any)?.text || '';
+    if (text && text.trim().length > 0) {
+      console.log('[Text Handler] Forwarding message to AI coach:', text.substring(0, 50));
+      await handleAICoachMessageWrapper(ctx, text);
+      return;
+    }
+  }
+
+  // If we get here, unknown message type
+  console.log('[Text Handler] Unknown message type, currentStep:', ctx.currentStep);
 });
 
 // Handle callback queries (button presses)
