@@ -1,6 +1,7 @@
 import { Context } from 'telegraf';
 import { addMedicalData, getMedicalDataByUser } from '../database/queries';
 import { analyzeMedicalData } from '../utils/openai';
+import { editOrReply } from '../utils/telegram';
 import type { CustomContext, MedicalData } from '../types';
 
 /**
@@ -18,7 +19,7 @@ export async function showMedicalMenu(ctx: CustomContext): Promise<void> {
     },
   };
 
-  await ctx.reply('🧪 <b>Медицинские данные</b>\n\nЗдесь ты можешь загружать и анализировать свои медицинские анализы.', keyboard);
+  await editOrReply(ctx, '🧪 <b>Медицинские данные</b>\n\nЗдесь ты можешь загружать и анализировать свои медицинские анализы.', keyboard);
 }
 
 /**

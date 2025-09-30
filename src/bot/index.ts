@@ -7,6 +7,7 @@ import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
 import { addWater, showWaterMenu, showWaterHistory } from '../handlers/water';
 import { handleAICoachMessage, startAICoach, showPopularQuestions, showAITips } from '../handlers/ai-coach';
 import { showMedicalMenu, handleMedicalDocumentUpload, handleMedicalTextInput, showMedicalHistory, showMedicalData } from '../handlers/medical';
+import { editOrReply } from '../utils/telegram';
 import type { BotContext } from '../types';
 
 // Extend Telegraf context with our custom properties
@@ -293,7 +294,7 @@ async function showMainMenu(ctx: CustomContext) {
     },
   };
 
-  await ctx.reply('Выбери действие:', keyboard);
+  await editOrReply(ctx, '<b>Выбери действие:</b>', keyboard);
 }
 
 async function startProfileRegistration(ctx: CustomContext) {
@@ -339,7 +340,7 @@ async function showProfile(ctx: CustomContext) {
     },
   };
 
-  await ctx.replyWithHTML(text, keyboard);
+  await editOrReply(ctx, text, keyboard);
 }
 
 async function showDashboardHandler(ctx: CustomContext) {
@@ -358,7 +359,7 @@ async function showFoodMenu(ctx: CustomContext) {
     },
   };
 
-  await ctx.reply('🍎 Выбери способ добавления еды:', keyboard);
+  await editOrReply(ctx, '<b>🍎 Выбери способ добавления еды:</b>', keyboard);
 }
 
 async function showWaterMenuHandler(ctx: CustomContext) {

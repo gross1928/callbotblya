@@ -1,6 +1,7 @@
 import { Context } from 'telegraf';
 import { getAICoachResponse } from '../utils/openai';
 import { addChatMessage, getChatHistory, getDashboardData, getFoodEntriesByDate } from '../database/queries';
+import { editOrReply } from '../utils/telegram';
 import type { CustomContext } from '../types';
 
 /**
@@ -130,7 +131,7 @@ export async function startAICoach(ctx: CustomContext): Promise<void> {
       },
     };
 
-    await ctx.replyWithHTML(welcomeMessage, keyboard);
+    await editOrReply(ctx, welcomeMessage, keyboard);
     ctx.currentStep = 'ai_coach';
 
   } catch (error) {
@@ -183,7 +184,7 @@ export async function showPopularQuestions(ctx: CustomContext): Promise<void> {
     },
   };
 
-  await ctx.replyWithHTML(questionsText, keyboard);
+  await editOrReply(ctx, questionsText, keyboard);
 }
 
 /**
@@ -223,5 +224,5 @@ export async function showAITips(ctx: CustomContext): Promise<void> {
     },
   };
 
-  await ctx.replyWithHTML(tipsText, keyboard);
+  await editOrReply(ctx, tipsText, keyboard);
 }

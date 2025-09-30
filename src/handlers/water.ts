@@ -1,6 +1,7 @@
 import { Context } from 'telegraf';
 import { addWaterEntry, getWaterEntriesByDate } from '../database/queries';
 import { calculateProgress, generateWaterProgressBar, formatWater } from '../utils/calculations';
+import { editOrReply } from '../utils/telegram';
 import type { CustomContext } from '../types';
 
 /**
@@ -147,7 +148,7 @@ ${getWaterMotivation(progress)}
       },
     };
 
-    await ctx.replyWithHTML(waterText, keyboard);
+    await editOrReply(ctx, waterText, keyboard);
 
   } catch (error) {
     console.error('Error showing water menu:', error);
