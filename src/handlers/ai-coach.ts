@@ -1,6 +1,6 @@
 import { Context } from 'telegraf';
 import { getAICoachResponse } from '../utils/openai';
-import { addChatMessage, getChatHistory } from '../database/queries';
+import { addChatMessage, getChatHistory, getDashboardData, getFoodEntriesByDate } from '../database/queries';
 import type { CustomContext } from '../types';
 
 /**
@@ -32,8 +32,27 @@ export async function handleAICoachMessage(ctx: CustomContext, message: string):
     // Get chat history for context
     const chatHistory = await getChatHistory(ctx.user.id, 10);
 
-    // Get AI response
-    const aiResponse = await getAICoachResponse(message.trim(), ctx.user, chatHistory);
+    // Get today's dashboard data for personalization
+    const today = new Date().toISOString().split('T')[0];
+    let dashboardData = null;
+    let todayFoodEntries = null;
+    
+    try {
+      dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
+      todayFoodEntries = await getFoodEntriesByDate(ctx.user.id, today);
+    } catch (error) {
+      console.log('[AI Coach] Could not load dashboard data:', error);
+      // Continue without dashboard data
+    }
+
+    // Get AI response with personalized data
+    const aiResponse = await getAICoachResponse(
+      message.trim(), 
+      ctx.user, 
+      chatHistory,
+      dashboardData,
+      todayFoodEntries
+    );
 
     // Save AI response to database
     await addChatMessage({

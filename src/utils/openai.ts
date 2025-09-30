@@ -193,7 +193,9 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
 export async function getAICoachResponse(
   userMessage: string, 
   userProfile?: any, 
-  chatHistory?: Array<{role: string, content: string}>
+  chatHistory?: Array<{role: string, content: string}>,
+  dashboardData?: any,
+  todayFoodEntries?: any[]
 ): Promise<string> {
   try {
     const systemPrompt = `Ты персональный AI-коуч по питанию и здоровью. 
@@ -222,7 +224,26 @@ ${userProfile ? `Профиль пользователя:
 - Цель: ${userProfile.goal}
 - Целевые калории: ${userProfile.target_calories} ккал
 - Целевые БЖУ: Б${userProfile.target_protein}г Ж${userProfile.target_fat}г У${userProfile.target_carbs}г
-` : ''}`;
+` : ''}
+${dashboardData ? `
+Прогресс за сегодня:
+- Калории: ${dashboardData.calories.consumed} из ${dashboardData.calories.target} ккал (осталось ${dashboardData.calories.target - dashboardData.calories.consumed} ккал)
+- Белки: ${dashboardData.macros.protein.consumed}г из ${dashboardData.macros.protein.target}г (осталось ${dashboardData.macros.protein.target - dashboardData.macros.protein.consumed}г)
+- Жиры: ${dashboardData.macros.fat.consumed}г из ${dashboardData.macros.fat.target}г (осталось ${dashboardData.macros.fat.target - dashboardData.macros.fat.consumed}г)
+- Углеводы: ${dashboardData.macros.carbs.consumed}г из ${dashboardData.macros.carbs.target}г (осталось ${dashboardData.macros.carbs.target - dashboardData.macros.carbs.consumed}г)
+- Вода: ${dashboardData.water.consumed}мл из ${dashboardData.water.target}мл (осталось ${dashboardData.water.target - dashboardData.water.consumed}мл)
+` : ''}
+${todayFoodEntries && todayFoodEntries.length > 0 ? `
+Приемы пищи сегодня:
+${todayFoodEntries.map((entry: any, index: number) => {
+  const food = entry.food_data;
+  const mealType = entry.meal_type === 'breakfast' ? 'Завтрак' : 
+                   entry.meal_type === 'lunch' ? 'Обед' : 
+                   entry.meal_type === 'dinner' ? 'Ужин' : 'Перекус';
+  return `${index + 1}. ${mealType}: ${food.name} (${food.calories} ккал, Б${food.protein}г Ж${food.fat}г У${food.carbs}г)`;
+}).join('\n')}
+` : ''}
+ВАЖНО: Используй эти данные для персонализированных советов! Например, если спрашивают про воду - говори точные цифры из прогресса.`;
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt }
