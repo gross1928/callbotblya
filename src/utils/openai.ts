@@ -206,6 +206,9 @@ export async function getAICoachResponse(
 - Учитывай профиль пользователя если он предоставлен
 - Если не знаешь ответа, честно скажи об этом
 - Не давай медицинские диагнозы, только общие рекомендации
+- ВАЖНО: Используй HTML теги для форматирования: <b>жирный текст</b> вместо **текст**
+- НЕ используй markdown звездочки **, используй только HTML теги <b></b>
+- Ответ должен быть кратким и не превышать 2000 символов
 
 ${userProfile ? `Профиль пользователя:
 - Имя: ${userProfile.name}
@@ -244,13 +247,19 @@ ${userProfile ? `Профиль пользователя:
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_tokens: 500,
+      max_tokens: 600, // Increased to allow for ~2000 characters in Russian
       temperature: 0.7,
     });
 
-    const content = response.choices[0]?.message?.content;
+    let content = response.choices[0]?.message?.content;
     if (!content) {
       throw new Error('No response from OpenAI');
+    }
+
+    // Telegram has a 4096 character limit, but we limit to 2048 for better UX
+    const maxLength = 2048;
+    if (content.length > maxLength) {
+      content = content.substring(0, maxLength - 50) + '...\n\n<i>Ответ слишком длинный, попробуй задать более конкретный вопрос.</i>';
     }
 
     return content;

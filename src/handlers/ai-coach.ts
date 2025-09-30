@@ -59,7 +59,7 @@ export async function handleAICoachMessage(ctx: CustomContext, message: string):
       },
     };
 
-    await ctx.reply(aiResponse, keyboard);
+    await ctx.replyWithHTML(aiResponse, keyboard);
 
   } catch (error) {
     console.error('Error handling AI coach message:', error);
