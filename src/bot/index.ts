@@ -37,14 +37,19 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     
     // Load session state from database
     const session = await getUserSession(telegramId);
+    console.log(`[Middleware] RAW session object:`, JSON.stringify(session, null, 2));
     console.log(`[Middleware] Loaded session for ${telegramId}:`, {
       currentStep: session?.currentStep,
-      tempDataKeys: session?.tempData ? Object.keys(session.tempData) : 'undefined'
+      tempDataKeys: session?.tempData ? Object.keys(session.tempData) : 'undefined',
+      tempDataType: typeof session?.tempData,
+      tempDataIsNull: session?.tempData === null,
+      tempDataIsUndefined: session?.tempData === undefined
     });
     if (session) {
       ctx.currentStep = session.currentStep;
       ctx.tempData = session.tempData || {};
       console.log(`[Middleware] Session found, tempData keys:`, Object.keys(ctx.tempData || {}));
+      console.log(`[Middleware] Session found, tempData:`, JSON.stringify(ctx.tempData));
     } else {
       ctx.currentStep = undefined;
       ctx.tempData = {};
@@ -56,7 +61,10 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     ctx.foodAnalyses = new Map();
     if (ctx.tempData) {
       // Load food analyses from tempData
-      for (const [key, value] of Object.entries(ctx.tempData)) {
+      const tempDataEntries = Object.entries(ctx.tempData);
+      console.log(`[Middleware] tempData entries count:`, tempDataEntries.length);
+      for (const [key, value] of tempDataEntries) {
+        console.log(`[Middleware] Processing tempData key:`, key, `starts with food_:`, key.startsWith('food_'));
         if (key.startsWith('food_')) {
           ctx.foodAnalyses.set(key, value);
           console.log(`[Middleware] Loaded food analysis ${key} into ctx.foodAnalyses`);
