@@ -73,7 +73,7 @@ export async function handleMedicalPhotoAnalysis(ctx: CustomContext): Promise<vo
           raw_data: result.data 
         },
         analysis: result.text,
-        recommendations: null
+        recommendations: undefined
       });
 
       console.log('[handleMedicalPhotoAnalysis] Medical data saved to database');
