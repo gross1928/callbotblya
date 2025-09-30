@@ -34,8 +34,8 @@ export async function handleAICoachMessage(ctx: CustomContext, message: string):
 
     // Get today's dashboard data for personalization
     const today = new Date().toISOString().split('T')[0];
-    let dashboardData = null;
-    let todayFoodEntries = null;
+    let dashboardData = undefined;
+    let todayFoodEntries = undefined;
     
     try {
       dashboardData = await getDashboardData(ctx.user.telegram_id.toString(), today);
