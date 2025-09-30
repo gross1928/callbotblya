@@ -31,7 +31,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
 
 ВАЖНО: Считай КБЖУ для ВСЕГО блюда, а не на 100г!
 
-Ответь в формате JSON:
+Ответь ТОЛЬКО в формате JSON без дополнительного текста:
 {
   "name": "название блюда",
   "ingredients": ["ингредиент1", "ингредиент2"],
@@ -61,8 +61,23 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
       throw new Error('No response from OpenAI');
     }
 
+    console.log('[analyzeFoodFromPhoto] OpenAI response:', content);
+
+    // Try to extract JSON from response (in case there's extra text)
+    let jsonContent = content.trim();
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+
     // Parse JSON response
-    const analysis = JSON.parse(content);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error('[analyzeFoodFromPhoto] Failed to parse JSON:', content);
+      throw new Error('OpenAI не вернул данные в формате JSON. Попробуй другое фото или опиши блюдо текстом.');
+    }
     
     // Use total values directly (no need to multiply)
     const weight = analysis.weight || 100;
@@ -132,8 +147,23 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
       throw new Error('No response from OpenAI');
     }
 
+    console.log('[analyzeFoodFromText] OpenAI response:', content);
+
+    // Try to extract JSON from response (in case there's extra text)
+    let jsonContent = content.trim();
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+
     // Parse JSON response
-    const analysis = JSON.parse(content);
+    let analysis;
+    try {
+      analysis = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error('[analyzeFoodFromText] Failed to parse JSON:', content);
+      throw new Error('Не удалось распознать формат ответа. Попробуй быть более конкретным (например: "Овсянка 100г с бананом 150г")');
+    }
     
     // Use total values directly (no need to multiply)
     const weight = analysis.weight || 100;
@@ -150,6 +180,9 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
 
   } catch (error) {
     console.error('Error analyzing food from text:', error);
+    if (error instanceof Error && error.message.includes('распознать формат')) {
+      throw error;
+    }
     throw new Error('Не удалось проанализировать описание. Попробуй быть более конкретным (например: "Овсянка 100г с бананом 150г")');
   }
 }
