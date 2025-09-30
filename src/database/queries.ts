@@ -284,6 +284,9 @@ export async function saveUserSession(telegramId: number, currentStep?: string, 
 }
 
 export async function clearUserSession(telegramId: number): Promise<void> {
+  console.log(`[clearUserSession] DELETING session for telegramId: ${telegramId}`);
+  console.log(`[clearUserSession] Called from:`, new Error().stack);
+  
   const { error } = await db
     .from('user_sessions')
     .delete()
@@ -291,5 +294,7 @@ export async function clearUserSession(telegramId: number): Promise<void> {
 
   if (error) {
     console.error('Error clearing user session:', error);
+  } else {
+    console.log(`[clearUserSession] Session deleted successfully for ${telegramId}`);
   }
 }
