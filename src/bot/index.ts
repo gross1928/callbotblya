@@ -489,6 +489,9 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     case 'profile':
       await showProfile(ctx);
       break;
+    case 'edit_profile':
+      await startProfileRegistration(ctx);
+      break;
     case 'food_photo':
       await ctx.reply('📷 Отправь фото еды для анализа');
       ctx.currentStep = 'food_photo';
