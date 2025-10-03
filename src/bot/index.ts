@@ -600,6 +600,35 @@ export async function startBot(): Promise<void> {
     await bot.telegram.deleteWebhook();
     console.log('Webhook deleted, starting polling...');
     
+    // Set menu button to show main menu
+    try {
+      await bot.telegram.setChatMenuButton({
+        menuButton: {
+          type: 'commands',
+        },
+      });
+      console.log('✅ Menu button configured');
+    } catch (error) {
+      console.error('⚠️ Failed to set menu button:', error);
+    }
+    
+    // Set bot commands for menu
+    try {
+      await bot.telegram.setMyCommands([
+        { command: 'start', description: '🏠 Главное меню' },
+        { command: 'dashboard', description: '📊 Дашборд' },
+        { command: 'food', description: '🍎 Добавить еду' },
+        { command: 'water', description: '💧 Добавить воду' },
+        { command: 'coach', description: '🤖 AI-коуч' },
+        { command: 'medical', description: '🧪 Медицинские данные' },
+        { command: 'profile', description: '👤 Профиль' },
+        { command: 'help', description: '❓ Помощь' },
+      ]);
+      console.log('✅ Bot commands set');
+    } catch (error) {
+      console.error('⚠️ Failed to set bot commands:', error);
+    }
+    
     // Use polling mode for Railway deployment
     await bot.launch({
       dropPendingUpdates: true, // Drop pending updates to avoid conflicts
