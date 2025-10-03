@@ -53,7 +53,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
         }
       ],
       max_completion_tokens: config.openai.maxCompletionTokens,
-      temperature: 0.3,
+      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
     const content = response.choices[0]?.message?.content;
@@ -145,7 +145,7 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
         }
       ],
       max_completion_tokens: config.openai.maxCompletionTokens,
-      temperature: 0.3,
+      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
       response_format: { type: "json_object" }
     });
 
@@ -320,7 +320,7 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
       model: config.openai.model,
       messages,
       max_completion_tokens: 700, // Increased for responses with medical context
-      temperature: 0.7,
+      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
     let content = response.choices[0]?.message?.content;
@@ -403,7 +403,7 @@ export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: str
         }
       ],
       max_completion_tokens: 1500, // Increased for detailed medical analyses
-      temperature: 0.3,
+      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
     const content = response.choices[0]?.message?.content;
@@ -456,7 +456,7 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
         { role: 'user', content: userPrompt }
       ],
       max_completion_tokens: 800,
-      temperature: 0.3,
+      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
     const content = response.choices[0]?.message?.content;
