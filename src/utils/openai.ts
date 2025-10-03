@@ -52,7 +52,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
           ]
         }
       ],
-      max_tokens: config.openai.maxTokens,
+      max_completion_tokens: config.openai.maxCompletionTokens,
       temperature: 0.3,
     });
 
@@ -144,7 +144,7 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
 }`
         }
       ],
-      max_tokens: config.openai.maxTokens,
+      max_completion_tokens: config.openai.maxCompletionTokens,
       temperature: 0.3,
       response_format: { type: "json_object" }
     });
@@ -319,7 +319,7 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_tokens: 700, // Increased for responses with medical context
+      max_completion_tokens: 700, // Increased for responses with medical context
       temperature: 0.7,
     });
 
@@ -402,7 +402,7 @@ export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: str
           ]
         }
       ],
-      max_tokens: 1500, // Increased for detailed medical analyses
+      max_completion_tokens: 1500, // Increased for detailed medical analyses
       temperature: 0.3,
     });
 
@@ -455,7 +455,7 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 800,
+      max_completion_tokens: 800,
       temperature: 0.3,
     });
 

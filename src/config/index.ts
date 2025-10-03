@@ -14,7 +14,7 @@ export const config = {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: 'gpt-5-nano', // В 3х раза дешевле чем gpt-4o-mini! Input: $0.05/1M, Output: $0.40/1M
     visionModel: 'gpt-5-nano', // Для анализа фото еды и медицинских данных
-    maxTokens: 1000,
+    maxCompletionTokens: 1000, // Новый параметр для gpt-5-nano (вместо max_tokens)
   },
 
   // Supabase
