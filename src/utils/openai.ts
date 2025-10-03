@@ -326,12 +326,21 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_completion_tokens: 2000, // Increased for reasoning model (reasoning + response)
+      max_completion_tokens: 4000, // Increased for reasoning model with detailed responses
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
+    console.log('[getAICoachResponse] Full response:', JSON.stringify(response, null, 2));
+    console.log('[getAICoachResponse] Usage:', response.usage);
+    console.log('[getAICoachResponse] Finish reason:', response.choices[0]?.finish_reason);
+    
     let content = response.choices[0]?.message?.content;
-    if (!content) {
+    console.log('[getAICoachResponse] Content length:', content?.length);
+    console.log('[getAICoachResponse] Content preview:', content?.substring(0, 100));
+    
+    if (!content || content.trim().length === 0) {
+      console.error('[getAICoachResponse] Empty or no content in response');
+      console.error('[getAICoachResponse] Full response:', JSON.stringify(response, null, 2));
       throw new Error('No response from OpenAI');
     }
 
