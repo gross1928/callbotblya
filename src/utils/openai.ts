@@ -103,84 +103,116 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
  */
 export async function analyzeFoodFromText(description: string): Promise<FoodAnalysis> {
   try {
+    console.log('[analyzeFoodFromText] Input description:', description);
+    
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages: [
         {
           role: 'system',
           content: `Ты эксперт по питанию. Анализируй описание еды и определи КБЖУ.
-Отвечай только в формате JSON без дополнительного текста.`
+ВАЖНО: Отвечай СТРОГО в формате JSON. НЕ добавляй никакого текста до или после JSON.
+Если описание слишком расплывчатое, все равно дай примерную оценку.`
         },
         {
           role: 'user',
           content: `Проанализируй это описание еды: "${description}"
 
 Определи:
-1. Название блюда
-2. Ингредиенты (список через запятую)
-3. Примерный вес порции в граммах
+1. Название блюда (если неясно - придумай похожее название)
+2. Ингредиенты (список, даже если приблизительный)
+3. Примерный вес порции в граммах (если не указан - оцени стандартную порцию)
 4. Общие калории всего блюда (не на 100г!)
 5. Общие белки всего блюда в граммах (не на 100г!)
 6. Общие жиры всего блюда в граммах (не на 100г!)
 7. Общие углеводы всего блюда в граммах (не на 100г!)
 
-ВАЖНО: Считай КБЖУ для ВСЕГО блюда, а не на 100г!
+ВАЖНО: 
+- Считай КБЖУ для ВСЕГО блюда, а не на 100г!
+- Даже если описание неточное, дай примерную оценку
+- Отвечай ТОЛЬКО JSON, без markdown блоков и комментариев
 
-Ответь в формате JSON:
+Формат ответа:
 {
   "name": "название блюда",
   "ingredients": ["ингредиент1", "ингредиент2"],
-  "weight": вес_в_граммах,
-  "total_calories": общие_калории_всего_блюда,
-  "total_protein": общие_белки_всего_блюда_в_граммах,
-  "total_fat": общие_жиры_всего_блюда_в_граммах,
-  "total_carbs": общие_углеводы_всего_блюда_в_граммах
+  "weight": 200,
+  "total_calories": 350,
+  "total_protein": 15.5,
+  "total_fat": 12.0,
+  "total_carbs": 45.2
 }`
         }
       ],
       max_tokens: config.openai.maxTokens,
       temperature: 0.3,
+      response_format: { type: "json_object" }
     });
 
     const content = response.choices[0]?.message?.content;
+    console.log('[analyzeFoodFromText] Raw OpenAI response:', content);
+    console.log('[analyzeFoodFromText] Response type:', typeof content);
+    
     if (!content) {
+      console.error('[analyzeFoodFromText] No content in response');
       throw new Error('No response from OpenAI');
     }
 
-    console.log('[analyzeFoodFromText] OpenAI response:', content);
-
     // Try to extract JSON from response (in case there's extra text)
     let jsonContent = content.trim();
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    
+    // Remove markdown code blocks if present
+    jsonContent = jsonContent.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+    
+    // Try to find JSON object
+    const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       jsonContent = jsonMatch[0];
     }
+
+    console.log('[analyzeFoodFromText] Cleaned JSON content:', jsonContent);
 
     // Parse JSON response
     let analysis;
     try {
       analysis = JSON.parse(jsonContent);
+      console.log('[analyzeFoodFromText] Parsed analysis:', JSON.stringify(analysis));
     } catch (parseError) {
-      console.error('[analyzeFoodFromText] Failed to parse JSON:', content);
+      console.error('[analyzeFoodFromText] JSON parse error:', parseError);
+      console.error('[analyzeFoodFromText] Failed to parse content:', content);
       throw new Error('Не удалось распознать формат ответа. Попробуй быть более конкретным (например: "Овсянка 100г с бананом 150г")');
+    }
+    
+    // Validate required fields
+    if (!analysis.total_calories && !analysis.calories) {
+      console.error('[analyzeFoodFromText] Missing calories in response:', analysis);
+      throw new Error('Не удалось определить калорийность. Попробуй описать блюдо подробнее с указанием веса.');
     }
     
     // Use total values directly (no need to multiply)
     const weight = analysis.weight || 100;
 
-    return {
+    const result = {
       name: analysis.name || 'Неизвестное блюдо',
       ingredients: analysis.ingredients || [],
       weight: weight,
-      calories: Math.round(analysis.total_calories || 0),
-      protein: Math.round((analysis.total_protein || 0) * 10) / 10,
-      fat: Math.round((analysis.total_fat || 0) * 10) / 10,
-      carbs: Math.round((analysis.total_carbs || 0) * 10) / 10,
+      calories: Math.round(analysis.total_calories || analysis.calories || 0),
+      protein: Math.round((analysis.total_protein || analysis.protein || 0) * 10) / 10,
+      fat: Math.round((analysis.total_fat || analysis.fat || 0) * 10) / 10,
+      carbs: Math.round((analysis.total_carbs || analysis.carbs || 0) * 10) / 10,
     };
+    
+    console.log('[analyzeFoodFromText] Final result:', JSON.stringify(result));
+    return result;
 
   } catch (error) {
-    console.error('Error analyzing food from text:', error);
+    console.error('[analyzeFoodFromText] Error:', error);
+    console.error('[analyzeFoodFromText] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    
     if (error instanceof Error && error.message.includes('распознать формат')) {
+      throw error;
+    }
+    if (error instanceof Error && error.message.includes('калорийность')) {
       throw error;
     }
     throw new Error('Не удалось проанализировать описание. Попробуй быть более конкретным (например: "Овсянка 100г с бананом 150г")');
