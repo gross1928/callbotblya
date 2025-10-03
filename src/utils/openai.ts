@@ -326,7 +326,7 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_completion_tokens: 4000, // Increased for reasoning model with detailed responses
+      max_completion_tokens: 8000, // Increased significantly for reasoning model with complex context (profile + dashboard + history + medical data)
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
