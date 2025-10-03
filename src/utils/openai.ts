@@ -326,7 +326,7 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_completion_tokens: 700, // Increased for responses with medical context
+      max_completion_tokens: 2000, // Increased for reasoning model (reasoning + response)
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
@@ -409,7 +409,7 @@ export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: str
           ]
         }
       ],
-      max_completion_tokens: 1500, // Increased for detailed medical analyses
+      max_completion_tokens: 3000, // Increased for reasoning model analyzing medical data
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
@@ -462,7 +462,7 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_completion_tokens: 800,
+      max_completion_tokens: 2000, // Increased for reasoning model
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
