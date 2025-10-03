@@ -135,7 +135,11 @@ export async function startAICoach(ctx: CustomContext): Promise<void> {
     };
 
     await editOrReply(ctx, welcomeMessage, keyboard);
+    
+    // Set AI coach mode and save to database
     ctx.currentStep = 'ai_coach';
+    const { saveUserSession } = await import('../database/queries');
+    await saveUserSession(ctx.from!.id, 'ai_coach', {});
 
   } catch (error) {
     console.error('Error starting AI coach:', error);

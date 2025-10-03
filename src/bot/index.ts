@@ -111,6 +111,8 @@ bot.command('dashboard', async (ctx: CustomContext) => {
     return;
   }
   
+  await clearUserSession(ctx.from!.id);
+  ctx.currentStep = undefined;
   await showDashboard(ctx);
 });
 
@@ -121,6 +123,8 @@ bot.command('food', async (ctx: CustomContext) => {
     return;
   }
   
+  await clearUserSession(ctx.from!.id);
+  ctx.currentStep = undefined;
   await showFoodMenu(ctx);
 });
 
@@ -131,6 +135,8 @@ bot.command('water', async (ctx: CustomContext) => {
     return;
   }
   
+  await clearUserSession(ctx.from!.id);
+  ctx.currentStep = undefined;
   await showWaterMenu(ctx);
 });
 
@@ -141,6 +147,7 @@ bot.command('coach', async (ctx: CustomContext) => {
     return;
   }
   
+  // AI coach will set its own step
   await startAICoach(ctx);
 });
 
@@ -151,6 +158,8 @@ bot.command('medical', async (ctx: CustomContext) => {
     return;
   }
   
+  await clearUserSession(ctx.from!.id);
+  ctx.currentStep = undefined;
   await showMedicalMenu(ctx);
 });
 
@@ -463,30 +472,45 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
 
   // Handle food history
   if (data === 'food_history') {
+    await clearUserSession(ctx.from!.id);
+    ctx.currentStep = undefined;
     await showFoodHistory(ctx);
     return;
   }
 
   switch (data) {
     case 'main_menu':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showMainMenu(ctx);
       break;
     case 'dashboard':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showDashboardHandler(ctx);
       break;
     case 'add_food':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showFoodMenu(ctx);
       break;
     case 'add_water':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showWaterMenuHandler(ctx);
       break;
     case 'ai_coach':
+      // AI coach will set its own step
       await startAICoachHandler(ctx);
       break;
     case 'medical':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showMedicalMenuHandler(ctx);
       break;
     case 'profile':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showProfile(ctx);
       break;
     case 'edit_profile':
@@ -510,18 +534,25 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
       await addWater(ctx, amount);
       break;
     case 'water_history':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showWaterHistory(ctx);
       break;
     case 'ai_questions':
+      // Keep AI coach mode active
       await showPopularQuestions(ctx);
       break;
     case 'upload_medical':
       await handleMedicalDocumentUpload(ctx);
       break;
     case 'view_medical':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showMedicalData(ctx);
       break;
     case 'medical_history':
+      await clearUserSession(ctx.from!.id);
+      ctx.currentStep = undefined;
       await showMedicalHistory(ctx);
       break;
     default:
