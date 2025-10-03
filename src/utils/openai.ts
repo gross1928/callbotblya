@@ -110,32 +110,32 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
       messages: [
         {
           role: 'system',
-          content: `Ты эксперт по питанию. Анализируй описание еды и определи КБЖУ.
-ВАЖНО: Отвечай СТРОГО в формате JSON. НЕ добавляй никакого текста до или после JSON.
-Если описание слишком расплывчатое, все равно дай примерную оценку.`
+          content: `You are a nutrition expert. Analyze food descriptions and provide nutritional information in JSON format.
+IMPORTANT: Always respond with valid JSON only. No markdown, no additional text.
+Even if the description is vague, provide a reasonable estimate.`
         },
         {
           role: 'user',
-          content: `Проанализируй это описание еды: "${description}"
+          content: `Analyze this food description: "${description}"
 
-Определи:
-1. Название блюда (если неясно - придумай похожее название)
-2. Ингредиенты (список, даже если приблизительный)
-3. Примерный вес порции в граммах (если не указан - оцени стандартную порцию)
-4. Общие калории всего блюда (не на 100г!)
-5. Общие белки всего блюда в граммах (не на 100г!)
-6. Общие жиры всего блюда в граммах (не на 100г!)
-7. Общие углеводы всего блюда в граммах (не на 100г!)
+Determine:
+1. Dish name (if unclear - suggest a similar name)
+2. Ingredients (list, even if approximate)
+3. Approximate portion weight in grams (if not specified - estimate standard portion)
+4. Total calories for entire dish (not per 100g!)
+5. Total protein for entire dish in grams (not per 100g!)
+6. Total fat for entire dish in grams (not per 100g!)
+7. Total carbs for entire dish in grams (not per 100g!)
 
-ВАЖНО: 
-- Считай КБЖУ для ВСЕГО блюда, а не на 100г!
-- Даже если описание неточное, дай примерную оценку
-- Отвечай ТОЛЬКО JSON, без markdown блоков и комментариев
+IMPORTANT: 
+- Calculate KBJU for ENTIRE dish, not per 100g!
+- Even if description is imprecise, give approximate estimate
+- Respond ONLY with JSON, no markdown blocks or comments
 
-Формат ответа:
+Response format (use this structure):
 {
-  "name": "название блюда",
-  "ingredients": ["ингредиент1", "ингредиент2"],
+  "name": "dish name",
+  "ingredients": ["ingredient1", "ingredient2"],
   "weight": 200,
   "total_calories": 350,
   "total_protein": 15.5,
@@ -149,12 +149,19 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
       response_format: { type: "json_object" }
     });
 
+    console.log('[analyzeFoodFromText] Full response object:', JSON.stringify(response, null, 2));
+    console.log('[analyzeFoodFromText] Choices:', response.choices);
+    console.log('[analyzeFoodFromText] First choice:', response.choices[0]);
+    console.log('[analyzeFoodFromText] Message:', response.choices[0]?.message);
+    
     const content = response.choices[0]?.message?.content;
     console.log('[analyzeFoodFromText] Raw OpenAI response:', content);
     console.log('[analyzeFoodFromText] Response type:', typeof content);
+    console.log('[analyzeFoodFromText] Response length:', content?.length);
     
-    if (!content) {
-      console.error('[analyzeFoodFromText] No content in response');
+    if (!content || content.trim().length === 0) {
+      console.error('[analyzeFoodFromText] Empty or no content in response');
+      console.error('[analyzeFoodFromText] Full response:', JSON.stringify(response, null, 2));
       throw new Error('No response from OpenAI');
     }
 
