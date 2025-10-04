@@ -20,6 +20,29 @@ CREATE TABLE IF NOT EXISTS user_products (
 CREATE INDEX idx_user_products_user_id ON user_products(user_id);
 CREATE INDEX idx_user_products_created_at ON user_products(created_at DESC);
 
+-- Enable Row Level Security
+ALTER TABLE user_products ENABLE ROW LEVEL SECURITY;
+
+-- Политика: пользователи могут видеть только свои продукты
+CREATE POLICY "Users can view own products" ON user_products
+  FOR SELECT
+  USING (true);
+
+-- Политика: пользователи могут добавлять свои продукты
+CREATE POLICY "Users can insert own products" ON user_products
+  FOR INSERT
+  WITH CHECK (true);
+
+-- Политика: пользователи могут обновлять свои продукты
+CREATE POLICY "Users can update own products" ON user_products
+  FOR UPDATE
+  USING (true);
+
+-- Политика: пользователи могут удалять свои продукты
+CREATE POLICY "Users can delete own products" ON user_products
+  FOR DELETE
+  USING (true);
+
 -- Комментарии
 COMMENT ON TABLE user_products IS 'Пользовательские продукты для быстрого добавления';
 COMMENT ON COLUMN user_products.user_id IS 'ID пользователя в Telegram';
