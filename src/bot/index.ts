@@ -245,85 +245,6 @@ bot.on('text', async (ctx: CustomContext) => {
   });
   
   const text = (ctx.message as any)?.text || '';
-
-  // Handle products reply keyboard buttons
-  if (text === '➕ Добавить продукт') {
-    try {
-      const { text: responseText, keyboard } = await handleAddProductStart();
-      ctx.currentStep = 'add_product_name';
-      ctx.tempData = {};
-      await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard });
-    } catch (error) {
-      console.error('Error starting add product:', error);
-      await ctx.reply('❌ Ошибка при добавлении продукта');
-    }
-    return;
-  }
-
-  if (text === '◀️ Назад к добавлению еды') {
-    await clearUserSession(ctx.from!.id);
-    ctx.currentStep = undefined;
-    await showFoodMenu(ctx);
-    return;
-  }
-
-  if (text === '◀️ К моим продуктам') {
-    await clearUserSession(ctx.from!.id);
-    ctx.currentStep = undefined;
-    try {
-      const { text: menuText, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
-      await ctx.reply(menuText, { parse_mode: 'HTML', ...keyboard });
-    } catch (error) {
-      console.error('Error showing products menu:', error);
-      await ctx.reply('❌ Ошибка при загрузке продуктов');
-    }
-    return;
-  }
-
-  // Handle pagination buttons
-  if (text === '⬅️' || text === '➡️') {
-    // Get current page from context (if stored) or assume 0
-    const currentPage = ctx.tempData?.productsPage || 0;
-    const newPage = text === '⬅️' ? Math.max(0, currentPage - 1) : currentPage + 1;
-    
-    try {
-      const { text: menuText, keyboard } = await showUserProductsMenu(ctx.from!.id, newPage);
-      ctx.tempData = { ...ctx.tempData, productsPage: newPage };
-      await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-      await ctx.reply(menuText, { parse_mode: 'HTML', ...keyboard });
-    } catch (error) {
-      console.error('Error changing products page:', error);
-      await ctx.reply('❌ Ошибка при загрузке продуктов');
-    }
-    return;
-  }
-
-  // Handle product selection from reply keyboard (buttons like "🍽 Сыр")
-  if (text.startsWith('🍽 ')) {
-    const productName = text.replace('🍽 ', '');
-    
-    try {
-      // Find product by name
-      const { getUserProductsPaginated } = await import('../database/products-queries');
-      const { products } = await getUserProductsPaginated(ctx.from!.id, 0, 100);
-      const product = products.find(p => p.name === productName);
-      
-      if (product) {
-        const { text: detailText, keyboard } = await showProductDetails(ctx.from!.id, product.id);
-        ctx.currentStep = `product_weight_${product.id}`;
-        ctx.tempData = { productId: product.id };
-        await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-        await ctx.reply(detailText, { parse_mode: 'HTML', ...keyboard });
-      } else {
-        await ctx.reply('❌ Продукт не найден');
-      }
-    } catch (error) {
-      console.error('Error handling product selection:', error);
-      await ctx.reply('❌ Ошибка при выборе продукта');
-    }
-    return;
-  }
   
   // If user is in registration process, handle profile step
   if (ctx.currentStep && (ctx.currentStep.startsWith('name') || 
@@ -398,45 +319,16 @@ bot.on('text', async (ctx: CustomContext) => {
     return;
   }
 
-  // Handle product weight input
+  // Handle product weight text input (для пользовательского ввода)
   if (ctx.currentStep?.startsWith('product_weight_')) {
-    const text = (ctx.message as any)?.text || '';
-    
-    // Handle quick weight buttons
-    let weightGrams = 0;
-    if (text.match(/^\d+г$/)) {
-      weightGrams = parseInt(text.replace('г', ''));
-    } else if (text === '◀️ К моим продуктам') {
-      await clearUserSession(ctx.from!.id);
-      ctx.currentStep = undefined;
-      const { text: menuText, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
-      await ctx.reply(menuText, { parse_mode: 'HTML', ...keyboard });
-      return;
-    } else if (text === '❌ Удалить продукт') {
-      const productId = ctx.tempData?.productId;
-      if (productId) {
-        try {
-          await handleDeleteProduct(ctx.from!.id, productId);
-          await ctx.reply('✅ Продукт удален!');
-          const { text: menuText, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
-          await ctx.reply(menuText, { parse_mode: 'HTML', ...keyboard });
-        } catch (error) {
-          await ctx.reply('❌ Ошибка при удалении продукта');
-        }
-      }
-      await clearUserSession(ctx.from!.id);
-      ctx.currentStep = undefined;
-      return;
-    } else {
-      weightGrams = parseInt(text);
-    }
+    const weightGrams = parseInt(text);
 
-    if (!weightGrams || weightGrams <= 0) {
+    if (!weightGrams || weightGrams <= 0 || isNaN(weightGrams)) {
       await ctx.reply('❌ Введи корректный вес в граммах (например: 150)');
       return;
     }
 
-    const productId = ctx.tempData?.productId;
+    const productId = parseInt(ctx.currentStep.replace('product_weight_', ''));
     if (!productId) {
       await ctx.reply('❌ Ошибка: продукт не найден');
       await clearUserSession(ctx.from!.id);
@@ -753,8 +645,95 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     return;
   }
 
+  // Handle add product button
+  if (data === 'add_product') {
+    await clearUserSession(ctx.from!.id);
+    try {
+      const { text: responseText, keyboard } = await handleAddProductStart();
+      ctx.currentStep = 'add_product_name';
+      ctx.tempData = {};
+      await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
+      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard });
+    } catch (error) {
+      console.error('Error starting add product:', error);
+      await ctx.reply('❌ Ошибка при добавлении продукта');
+    }
+    return;
+  }
+
+  // Handle product weight selection from buttons
+  if (data.startsWith('product_weight_')) {
+    const parts = data.split('_');
+    const productId = parseInt(parts[2]);
+    const weight = parseInt(parts[3]);
+    
+    if (!productId || !weight) {
+      await ctx.reply('❌ Ошибка: неверные параметры');
+      return;
+    }
+
+    try {
+      const product = await getUserProduct(ctx.from!.id, productId);
+      if (!product) {
+        await ctx.reply('❌ Продукт не найден');
+        return;
+      }
+
+      const foodAnalysis = createFoodAnalysisFromProduct(product, weight);
+      
+      // Save to session like regular food analysis
+      const analysisId = `product_${Date.now()}`;
+      const existingSession = await getUserSession(ctx.from!.id);
+      const tempData = existingSession?.tempData || {};
+      tempData[analysisId] = foodAnalysis;
+      
+      await saveUserSession(ctx.from!.id, existingSession?.currentStep, tempData);
+      
+      // Show meal type selection
+      const analysisText = `
+🍎 <b>Продукт добавлен</b>
+
+<b>Блюдо:</b> ${foodAnalysis.name}
+<b>Вес:</b> ${foodAnalysis.weight}г
+
+<b>КБЖУ:</b>
+• Калории: ${foodAnalysis.calories} ккал
+• Белки: ${foodAnalysis.protein}г | Жиры: ${foodAnalysis.fat}г | Углеводы: ${foodAnalysis.carbs}г
+
+Сохранить этот прием пищи?
+      `;
+
+      const keyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🌅 Завтрак', callback_data: `save_food_breakfast_${analysisId}` },
+              { text: '🌞 Обед', callback_data: `save_food_lunch_${analysisId}` },
+            ],
+            [
+              { text: '🌙 Ужин', callback_data: `save_food_dinner_${analysisId}` },
+              { text: '🍿 Перекус', callback_data: `save_food_snack_${analysisId}` },
+            ],
+            [
+              { text: '✏️ Редактировать', callback_data: `edit_food_${analysisId}` },
+            ],
+            [
+              { text: '❌ Отмена', callback_data: 'cancel_food' },
+            ],
+          ],
+        },
+      };
+
+      await ctx.reply(analysisText, { parse_mode: 'HTML', ...keyboard });
+    } catch (error) {
+      console.error('Error handling product weight:', error);
+      await ctx.reply('❌ Ошибка при обработке веса продукта');
+    }
+    return;
+  }
+
   // Handle product selection
-  if (data.startsWith('product_')) {
+  if (data.startsWith('product_') && !data.startsWith('product_weight_')) {
     const productId = parseInt(data.split('_')[1]);
     try {
       const { text, keyboard } = await showProductDetails(ctx.from!.id, productId);

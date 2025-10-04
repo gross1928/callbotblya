@@ -15,25 +15,29 @@ export async function showUserProductsMenu(
   page: number = 0
 ): Promise<{ text: string; keyboard: any }> {
   try {
-    const { products, total, hasMore } = await getUserProductsPaginated(userId, page, 8);
+    const { products, total, hasMore } = await getUserProductsPaginated(userId, page, 6);
 
     if (products.length === 0) {
       return {
-        text: '📦 У тебя пока нет сохраненных продуктов.\n\nНажми "+ Добавить продукт" чтобы создать свой первый продукт!',
-        keyboard: Markup.keyboard([
-          ['➕ Добавить продукт'],
-          ['◀️ Назад к добавлению еды'],
-        ]).resize(),
+        text: '📦 У тебя пока нет сохраненных продуктов.\n\nДобавь свой первый продукт с КБЖУ для быстрого использования!',
+        keyboard: {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '➕ Добавить продукт', callback_data: 'add_product' }],
+              [{ text: '🔙 Назад', callback_data: 'add_food' }],
+            ],
+          },
+        },
       };
     }
 
-    // Создаем кнопки для продуктов (по 2 в ряд)
+    // Создаем кнопки для продуктов (по 2 в ряд) с inline keyboard
     const productButtons = [];
     for (let i = 0; i < products.length; i += 2) {
       const row = [];
-      row.push(`🍽 ${products[i].name}`);
+      row.push({ text: `🍽 ${products[i].name}`, callback_data: `product_${products[i].id}` });
       if (i + 1 < products.length) {
-        row.push(`🍽 ${products[i + 1].name}`);
+        row.push({ text: `🍽 ${products[i + 1].name}`, callback_data: `product_${products[i + 1].id}` });
       }
       productButtons.push(row);
     }
@@ -41,19 +45,22 @@ export async function showUserProductsMenu(
     // Навигация
     const navigationRow = [];
     if (page > 0) {
-      navigationRow.push('⬅️');
+      navigationRow.push({ text: '⬅️', callback_data: `products_page_${page - 1}` });
     }
-    navigationRow.push(`Стр ${page + 1} / ${Math.ceil(total / 8)}`);
     if (hasMore) {
-      navigationRow.push('➡️');
+      navigationRow.push({ text: '➡️', callback_data: `products_page_${page + 1}` });
     }
 
-    const keyboard = Markup.keyboard([
-      ...productButtons,
-      navigationRow,
-      ['➕ Добавить продукт'],
-      ['◀️ Назад к добавлению еды'],
-    ]).resize();
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          ...productButtons,
+          ...(navigationRow.length > 0 ? [navigationRow] : []),
+          [{ text: '➕ Добавить продукт', callback_data: 'add_product' }],
+          [{ text: '🔙 Назад', callback_data: 'add_food' }],
+        ],
+      },
+    };
 
     const text = `📦 Твои продукты (${total}):\n\nВыбери продукт чтобы использовать его, или добавь новый!`;
 
@@ -77,7 +84,13 @@ export async function showProductDetails(
     if (!product) {
       return {
         text: '❌ Продукт не найден',
-        keyboard: Markup.keyboard([['◀️ К моим продуктам']]).resize(),
+        keyboard: {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '◀️ К моим продуктам', callback_data: 'user_products' }],
+            ],
+          },
+        },
       };
     }
 
@@ -89,12 +102,24 @@ export async function showProductDetails(
       `Сколько грамм <b>${product.name}</b> ты съел?\n` +
       `Введи вес в граммах (например: 150)`;
 
-    const keyboard = Markup.keyboard([
-      ['50г', '100г', '150г'],
-      ['200г', '250г', '300г'],
-      ['❌ Удалить продукт'],
-      ['◀️ К моим продуктам'],
-    ]).resize();
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '50г', callback_data: `product_weight_${productId}_50` },
+            { text: '100г', callback_data: `product_weight_${productId}_100` },
+            { text: '150г', callback_data: `product_weight_${productId}_150` },
+          ],
+          [
+            { text: '200г', callback_data: `product_weight_${productId}_200` },
+            { text: '250г', callback_data: `product_weight_${productId}_250` },
+            { text: '300г', callback_data: `product_weight_${productId}_300` },
+          ],
+          [{ text: '❌ Удалить продукт', callback_data: `delete_product_${productId}` }],
+          [{ text: '◀️ К моим продуктам', callback_data: 'user_products' }],
+        ],
+      },
+    };
 
     return { text, keyboard };
   } catch (error) {
