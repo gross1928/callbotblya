@@ -123,3 +123,15 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+// User Products Types
+export interface UserProduct {
+  id: number;
+  user_id: number;
+  name: string;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  created_at: string;
+}
