@@ -99,7 +99,8 @@ bot.start(async (ctx: CustomContext) => {
     await ctx.reply(
       '🍎 Добро пожаловать в бота "ДаЕда"!\n\n' +
       'Я помогу тебе отслеживать питание, калории, воду и медицинские данные.\n\n' +
-      'Для начала нужно создать профиль. Нажми /profile чтобы начать регистрацию.'
+      'Для начала нужно создать профиль. Нажми /profile чтобы начать регистрацию.',
+      Markup.removeKeyboard()
     );
   } else {
     await showMainMenu(ctx);
@@ -118,7 +119,7 @@ bot.command('profile', async (ctx: CustomContext) => {
 // Dashboard command
 bot.command('dashboard', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile');
+    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
     return;
   }
   
@@ -130,7 +131,7 @@ bot.command('dashboard', async (ctx: CustomContext) => {
 // Food tracking command
 bot.command('food', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile');
+    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
     return;
   }
   
@@ -142,7 +143,7 @@ bot.command('food', async (ctx: CustomContext) => {
 // Water tracking command
 bot.command('water', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile');
+    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
     return;
   }
   
@@ -154,7 +155,7 @@ bot.command('water', async (ctx: CustomContext) => {
 // AI Coach command
 bot.command('coach', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile');
+    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
     return;
   }
   
@@ -165,7 +166,7 @@ bot.command('coach', async (ctx: CustomContext) => {
 // Medical data command
 bot.command('medical', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile');
+    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
     return;
   }
   
@@ -452,7 +453,8 @@ async function startProfileRegistration(ctx: CustomContext) {
   await ctx.reply(
     '👤 Давай создадим твой профиль!\n\n' +
     'Для расчета твоих потребностей в калориях мне нужна следующая информация:\n\n' +
-    'Начнем с имени. Как тебя зовут?'
+    'Начнем с имени. Как тебя зовут?',
+    Markup.removeKeyboard()
   );
   
   ctx.currentStep = 'name';
