@@ -52,9 +52,18 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
           ]
         }
       ],
-      max_completion_tokens: config.openai.maxCompletionTokens,
+      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual JSON response fit
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
+
+    console.log('[analyzeFoodFromPhoto] Finish reason:', response.choices[0]?.finish_reason);
+    console.log('[analyzeFoodFromPhoto] Usage:', response.usage);
+
+    // Check if response was truncated due to token limit
+    if (response.choices[0]?.finish_reason === 'length') {
+      console.error('[analyzeFoodFromPhoto] Response truncated due to token limit');
+      throw new Error('Ответ модели был обрезан. Попробуй другое фото или опиши блюдо текстом.');
+    }
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
@@ -144,7 +153,7 @@ Response format (use this structure):
 }`
         }
       ],
-      max_completion_tokens: config.openai.maxCompletionTokens,
+      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual JSON response fit
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
       response_format: { type: "json_object" }
     });
@@ -153,11 +162,20 @@ Response format (use this structure):
     console.log('[analyzeFoodFromText] Choices:', response.choices);
     console.log('[analyzeFoodFromText] First choice:', response.choices[0]);
     console.log('[analyzeFoodFromText] Message:', response.choices[0]?.message);
+    console.log('[analyzeFoodFromText] Finish reason:', response.choices[0]?.finish_reason);
+    console.log('[analyzeFoodFromText] Usage:', response.usage);
     
     const content = response.choices[0]?.message?.content;
     console.log('[analyzeFoodFromText] Raw OpenAI response:', content);
     console.log('[analyzeFoodFromText] Response type:', typeof content);
     console.log('[analyzeFoodFromText] Response length:', content?.length);
+    
+    // Check if response was truncated due to token limit
+    if (response.choices[0]?.finish_reason === 'length') {
+      console.error('[analyzeFoodFromText] Response truncated due to token limit');
+      console.error('[analyzeFoodFromText] Full response:', JSON.stringify(response, null, 2));
+      throw new Error('Ответ модели был обрезан. Попробуй описать блюдо проще или короче.');
+    }
     
     if (!content || content.trim().length === 0) {
       console.error('[analyzeFoodFromText] Empty or no content in response');
@@ -418,9 +436,18 @@ export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: str
           ]
         }
       ],
-      max_completion_tokens: 3000, // Increased for reasoning model analyzing medical data
+      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual response fit
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
+
+    console.log('[analyzeMedicalPhoto] Finish reason:', response.choices[0]?.finish_reason);
+    console.log('[analyzeMedicalPhoto] Usage:', response.usage);
+
+    // Check if response was truncated due to token limit
+    if (response.choices[0]?.finish_reason === 'length') {
+      console.error('[analyzeMedicalPhoto] Response truncated due to token limit');
+      throw new Error('Ответ модели был обрезан. Попробуй другое фото.');
+    }
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
@@ -471,9 +498,18 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_completion_tokens: 2000, // Increased for reasoning model
+      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual response fit
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
+
+    console.log('[analyzeMedicalData] Finish reason:', response.choices[0]?.finish_reason);
+    console.log('[analyzeMedicalData] Usage:', response.usage);
+
+    // Check if response was truncated due to token limit
+    if (response.choices[0]?.finish_reason === 'length') {
+      console.error('[analyzeMedicalData] Response truncated due to token limit');
+      throw new Error('Ответ модели был обрезан. Попробуй упростить запрос.');
+    }
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
