@@ -1,5 +1,5 @@
 import { Context } from 'telegraf';
-import { createUserProfile, saveUserSession, clearUserSession } from '../database/queries';
+import { createUserProfile, updateUserProfile, getUserByTelegramId, saveUserSession, clearUserSession } from '../database/queries';
 import { calculateBMR, calculateTDEE, calculateTargetCalories, calculateTargetMacros } from '../utils/calculations';
 import type { CustomContext, UserProfile, ActivityLevel, UserGoal } from '../types';
 
@@ -322,9 +322,8 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     );
     const targetMacros = calculateTargetMacros(targetCalories, data.goal);
 
-    // Create user profile
-    const profileData: Omit<UserProfile, 'id' | 'created_at' | 'updated_at'> = {
-      telegram_id: ctx.from.id,
+    // Prepare profile data
+    const profileData = {
       name: data.name,
       age: data.age,
       gender: data.gender,
@@ -342,7 +341,23 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
       target_carbs: targetMacros.carbs,
     };
 
-    const user = await createUserProfile(profileData);
+    // Check if user already exists
+    const existingUser = await getUserByTelegramId(ctx.from.id);
+    let user: UserProfile;
+
+    if (existingUser) {
+      // Update existing profile
+      user = await updateUserProfile(ctx.from.id, profileData);
+      console.log('Profile updated for user:', ctx.from.id);
+    } else {
+      // Create new profile
+      const newProfileData: Omit<UserProfile, 'id' | 'created_at' | 'updated_at'> = {
+        telegram_id: ctx.from.id,
+        ...profileData,
+      };
+      user = await createUserProfile(newProfileData);
+      console.log('Profile created for user:', ctx.from.id);
+    }
     
     // Clear registration state
     ctx.currentStep = undefined;
@@ -354,9 +369,10 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     await clearUserSession(ctx.from!.id);
 
     const targetText = data.targetWeight ? `\n<b>Желаемый вес:</b> ${data.targetWeight} кг за ${data.targetDate} месяцев` : '';
+    const actionText = existingUser ? 'обновлен' : 'создан';
     
     const successMessage = `
-🎉 <b>Профиль создан успешно!</b>
+🎉 <b>Профиль ${actionText} успешно!</b>
 
 👤 <b>Твои данные:</b>
 • Имя: ${data.name}
@@ -389,9 +405,9 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     await ctx.replyWithHTML(successMessage, keyboard);
 
   } catch (error) {
-    console.error('Error creating profile:', error);
+    console.error('Error saving profile:', error);
     await ctx.reply(
-      'Произошла ошибка при создании профиля. Попробуй еще раз командой /profile'
+      'Произошла ошибка при сохранении профиля. Попробуй еще раз командой /profile'
     );
   }
 }
