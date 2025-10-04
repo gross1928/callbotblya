@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS user_products (
   -- Индекс для быстрого поиска продуктов пользователя
   CONSTRAINT fk_user_products_user_id 
     FOREIGN KEY (user_id) 
-    REFERENCES users(telegram_id) 
+    REFERENCES user_profiles(telegram_id) 
     ON DELETE CASCADE
 );
 
