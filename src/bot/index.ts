@@ -259,13 +259,6 @@ bot.on('text', async (ctx: CustomContext) => {
 
   // Handle add product - name input
   if (ctx.currentStep === 'add_product_name') {
-    const text = (ctx.message as any)?.text || '';
-    if (text === '❌ Отмена') {
-      await clearUserSession(ctx.from!.id);
-      ctx.currentStep = undefined;
-      await ctx.reply('❌ Добавление продукта отменено');
-      return;
-    }
     try {
       const { text: responseText, keyboard } = await handleAddProductName(text);
       ctx.currentStep = 'add_product_kbzhu';
@@ -281,14 +274,6 @@ bot.on('text', async (ctx: CustomContext) => {
 
   // Handle add product - KBZHU input
   if (ctx.currentStep === 'add_product_kbzhu') {
-    const text = (ctx.message as any)?.text || '';
-    if (text === '❌ Отмена') {
-      await clearUserSession(ctx.from!.id);
-      ctx.currentStep = undefined;
-      await ctx.reply('❌ Добавление продукта отменено');
-      return;
-    }
-
     const kbzhu = parseKBZHU(text);
     if (!kbzhu) {
       await ctx.reply(
@@ -657,6 +642,21 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     } catch (error) {
       console.error('Error starting add product:', error);
       await ctx.reply('❌ Ошибка при добавлении продукта');
+    }
+    return;
+  }
+
+  // Handle cancel add product
+  if (data === 'cancel_add_product') {
+    await clearUserSession(ctx.from!.id);
+    ctx.currentStep = undefined;
+    try {
+      const { text, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
+      await ctx.reply('❌ Добавление продукта отменено');
+      await ctx.reply(text, { parse_mode: 'HTML', ...keyboard });
+    } catch (error) {
+      console.error('Error showing products menu:', error);
+      await ctx.reply('❌ Ошибка при загрузке продуктов');
     }
     return;
   }

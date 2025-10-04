@@ -138,7 +138,13 @@ export async function handleAddProductStart(): Promise<{ text: string; keyboard:
     'Например: "Сыр Голландский" или "Греча вареная"\n\n' +
     'Старайся указывать конкретное название, чтобы потом было проще найти!';
 
-  const keyboard = Markup.keyboard([['❌ Отмена']]).resize();
+  const keyboard = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '❌ Отмена', callback_data: 'cancel_add_product' }],
+      ],
+    },
+  };
 
   return { text, keyboard };
 }
@@ -155,7 +161,13 @@ export async function handleAddProductName(productName: string): Promise<{ text:
     '<code>220\n13\n5\n21</code>\n\n' +
     'Каждая цифра с новой строки!';
 
-  const keyboard = Markup.keyboard([['❌ Отмена']]).resize();
+  const keyboard = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '❌ Отмена', callback_data: 'cancel_add_product' }],
+      ],
+    },
+  };
 
   return { text, keyboard };
 }
@@ -215,10 +227,13 @@ export async function handleAddProductComplete(
       `🍞 У: ${product.carbs}г\n\n` +
       'Теперь ты можешь быстро добавить этот продукт из меню "Продукты"!';
 
-    const keyboard = Markup.keyboard([
-      ['◀️ К моим продуктам'],
-      ['🍽 Добавить еду'],
-    ]).resize();
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '◀️ К моим продуктам', callback_data: 'user_products' }],
+        ],
+      },
+    };
 
     return { text, keyboard, product };
   } catch (error) {
