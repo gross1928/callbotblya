@@ -1,4 +1,4 @@
-import { Telegraf, Context, Markup } from 'telegraf';
+import { Telegraf, Context } from 'telegraf';
 import { config, validateConfig } from '../config';
 import { getUserByTelegramId, getUserSession, saveUserSession, clearUserSession } from '../database/queries';
 import { getUserProduct } from '../database/products-queries';
@@ -99,8 +99,7 @@ bot.start(async (ctx: CustomContext) => {
     await ctx.reply(
       '🍎 Добро пожаловать в бота "ДаЕда"!\n\n' +
       'Я помогу тебе отслеживать питание, калории, воду и медицинские данные.\n\n' +
-      'Для начала нужно создать профиль. Нажми /profile чтобы начать регистрацию.',
-      Markup.removeKeyboard()
+      'Для начала нужно создать профиль. Нажми /profile чтобы начать регистрацию.'
     );
   } else {
     await showMainMenu(ctx);
@@ -119,7 +118,7 @@ bot.command('profile', async (ctx: CustomContext) => {
 // Dashboard command
 bot.command('dashboard', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
+    await ctx.reply('Сначала создай профиль командой /profile');
     return;
   }
   
@@ -131,7 +130,7 @@ bot.command('dashboard', async (ctx: CustomContext) => {
 // Food tracking command
 bot.command('food', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
+    await ctx.reply('Сначала создай профиль командой /profile');
     return;
   }
   
@@ -143,7 +142,7 @@ bot.command('food', async (ctx: CustomContext) => {
 // Water tracking command
 bot.command('water', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
+    await ctx.reply('Сначала создай профиль командой /profile');
     return;
   }
   
@@ -155,7 +154,7 @@ bot.command('water', async (ctx: CustomContext) => {
 // AI Coach command
 bot.command('coach', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
+    await ctx.reply('Сначала создай профиль командой /profile');
     return;
   }
   
@@ -166,7 +165,7 @@ bot.command('coach', async (ctx: CustomContext) => {
 // Medical data command
 bot.command('medical', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
-    await ctx.reply('Сначала создай профиль командой /profile', Markup.removeKeyboard());
+    await ctx.reply('Сначала создай профиль командой /profile');
     return;
   }
   
@@ -265,10 +264,10 @@ bot.on('text', async (ctx: CustomContext) => {
       ctx.currentStep = 'add_product_kbzhu';
       ctx.tempData = { productName: text };
       await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error handling product name:', error);
-      await ctx.reply('❌ Ошибка при добавлении продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при добавлении продукта');
     }
     return;
   }
@@ -283,7 +282,7 @@ bot.on('text', async (ctx: CustomContext) => {
         '<code>калории\nбелки\nжиры\nуглеводы</code>\n\n' +
         'Пример:\n' +
         '<code>220\n13\n5\n21</code>',
-        { parse_mode: 'HTML', ...Markup.removeKeyboard() }
+        { parse_mode: 'HTML' }
       );
       return;
     }
@@ -297,10 +296,10 @@ bot.on('text', async (ctx: CustomContext) => {
       );
       await clearUserSession(ctx.from!.id);
       ctx.currentStep = undefined;
-      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error completing add product:', error);
-      await ctx.reply('❌ Ошибка при сохранении продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при сохранении продукта');
     }
     return;
   }
@@ -310,13 +309,13 @@ bot.on('text', async (ctx: CustomContext) => {
     const weightGrams = parseInt(text);
 
     if (!weightGrams || weightGrams <= 0 || isNaN(weightGrams)) {
-      await ctx.reply('❌ Введи корректный вес в граммах (например: 150)', Markup.removeKeyboard());
+      await ctx.reply('❌ Введи корректный вес в граммах (например: 150)');
       return;
     }
 
     const productId = parseInt(ctx.currentStep.replace('product_weight_', ''));
     if (!productId) {
-      await ctx.reply('❌ Ошибка: продукт не найден', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка: продукт не найден');
       await clearUserSession(ctx.from!.id);
       ctx.currentStep = undefined;
       return;
@@ -325,7 +324,7 @@ bot.on('text', async (ctx: CustomContext) => {
     try {
       const product = await getUserProduct(ctx.from!.id, productId);
       if (!product) {
-        await ctx.reply('❌ Продукт не найден', Markup.removeKeyboard());
+        await ctx.reply('❌ Продукт не найден');
         await clearUserSession(ctx.from!.id);
         ctx.currentStep = undefined;
         return;
@@ -373,10 +372,10 @@ bot.on('text', async (ctx: CustomContext) => {
         },
       };
 
-      await ctx.reply(analysisText, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(analysisText, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error handling product weight:', error);
-      await ctx.reply('❌ Ошибка при обработке веса продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при обработке веса продукта');
     }
     return;
   }
@@ -453,8 +452,7 @@ async function startProfileRegistration(ctx: CustomContext) {
   await ctx.reply(
     '👤 Давай создадим твой профиль!\n\n' +
     'Для расчета твоих потребностей в калориях мне нужна следующая информация:\n\n' +
-    'Начнем с имени. Как тебя зовут?',
-    Markup.removeKeyboard()
+    'Начнем с имени. Как тебя зовут?'
   );
   
   ctx.currentStep = 'name';
@@ -624,25 +622,10 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     ctx.currentStep = undefined;
     try {
       const { text, keyboard } = await showUserProductsMenu(ctx.from!.id, page);
-      
-      // Remove reply keyboard and show inline keyboard
-      try {
-        await ctx.editMessageText(text, { 
-          parse_mode: 'HTML', 
-          ...keyboard,
-          ...Markup.removeKeyboard()
-        });
-      } catch (editError) {
-        // If edit fails (e.g., message not found), send new message
-        await ctx.reply(text, { 
-          parse_mode: 'HTML', 
-          ...keyboard,
-          ...Markup.removeKeyboard()
-        });
-      }
+      await ctx.editMessageText(text, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error showing products menu:', error);
-      await ctx.reply('❌ Ошибка при загрузке продуктов', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при загрузке продуктов');
     }
     return;
   }
@@ -655,10 +638,10 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
       ctx.currentStep = 'add_product_name';
       ctx.tempData = {};
       await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(responseText, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error starting add product:', error);
-      await ctx.reply('❌ Ошибка при добавлении продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при добавлении продукта');
     }
     return;
   }
@@ -669,11 +652,11 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     ctx.currentStep = undefined;
     try {
       const { text, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
-      await ctx.reply('❌ Добавление продукта отменено', Markup.removeKeyboard());
-      await ctx.reply(text, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply('❌ Добавление продукта отменено');
+      await ctx.reply(text, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error showing products menu:', error);
-      await ctx.reply('❌ Ошибка при загрузке продуктов', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при загрузке продуктов');
     }
     return;
   }
@@ -741,10 +724,10 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
         },
       };
 
-      await ctx.reply(analysisText, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(analysisText, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error handling product weight:', error);
-      await ctx.reply('❌ Ошибка при обработке веса продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при обработке веса продукта');
     }
     return;
   }
@@ -757,10 +740,10 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
       ctx.currentStep = `product_weight_${productId}`;
       ctx.tempData = { productId };
       await saveUserSession(ctx.from!.id, ctx.currentStep, ctx.tempData);
-      await ctx.editMessageText(text, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.editMessageText(text, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error showing product details:', error);
-      await ctx.reply('❌ Ошибка при загрузке продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при загрузке продукта');
     }
     return;
   }
@@ -770,12 +753,12 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     const productId = parseInt(data.split('_')[2]);
     try {
       await handleDeleteProduct(ctx.from!.id, productId);
-      await ctx.reply('✅ Продукт удален!', Markup.removeKeyboard());
+      await ctx.reply('✅ Продукт удален!');
       const { text, keyboard } = await showUserProductsMenu(ctx.from!.id, 0);
-      await ctx.reply(text, { parse_mode: 'HTML', ...keyboard, ...Markup.removeKeyboard() });
+      await ctx.reply(text, { parse_mode: 'HTML', ...keyboard });
     } catch (error) {
       console.error('Error deleting product:', error);
-      await ctx.reply('❌ Ошибка при удалении продукта', Markup.removeKeyboard());
+      await ctx.reply('❌ Ошибка при удалении продукта');
     }
     return;
   }
