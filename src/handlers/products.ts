@@ -255,12 +255,24 @@ export async function handleDeleteProduct(
     if (!success) {
       return {
         text: '❌ Не удалось удалить продукт',
-        keyboard: Markup.keyboard([['◀️ К моим продуктам']]).resize(),
+        keyboard: {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '◀️ К моим продуктам', callback_data: 'user_products' }],
+            ],
+          },
+        },
       };
     }
 
     const text = '✅ Продукт успешно удален!';
-    const keyboard = Markup.keyboard([['◀️ К моим продуктам']]).resize();
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '◀️ К моим продуктам', callback_data: 'user_products' }],
+        ],
+      },
+    };
 
     return { text, keyboard };
   } catch (error) {
