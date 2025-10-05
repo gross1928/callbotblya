@@ -20,6 +20,7 @@ import {
 } from '../handlers/products';
 import { showSubscriptionPage, handleBuySubscription, hasActiveAccess, showSubscriptionRequired } from '../handlers/subscription';
 import { startSubscriptionChecker } from '../utils/subscription-checker';
+import { checkRateLimit, startRateLimiterCleanup, logRateLimiterStats } from '../utils/rate-limiter';
 import { editOrReply } from '../utils/telegram';
 import type { BotContext } from '../types';
 
@@ -41,6 +42,13 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
   
   if (!telegramId) {
     return next();
+  }
+
+  // Global rate limit (prevents DoS attacks and excessive usage)
+  const globalLimit = checkRateLimit(telegramId, 'GLOBAL');
+  if (!globalLimit.allowed) {
+    await ctx.reply(globalLimit.message || '⚠️ Превышен общий лимит запросов.');
+    return; // Stop processing
   }
 
   try {
@@ -264,7 +272,21 @@ bot.on('photo', async (ctx: CustomContext) => {
 
   // Check if user is uploading medical data
   if (ctx.currentStep === 'medical_upload') {
+    // Rate limit medical photo analysis
+    const medicalLimit = checkRateLimit(ctx.from!.id, 'MEDICAL_ANALYSIS');
+    if (!medicalLimit.allowed) {
+      await ctx.reply(medicalLimit.message || '⚠️ Превышен лимит. Попробуй позже.');
+      return;
+    }
+    
     await handleMedicalPhotoAnalysis(ctx);
+    return;
+  }
+
+  // Rate limit for food photo analysis (MOST EXPENSIVE!)
+  const foodPhotoLimit = checkRateLimit(ctx.from!.id, 'FOOD_PHOTO_ANALYSIS');
+  if (!foodPhotoLimit.allowed) {
+    await ctx.reply(foodPhotoLimit.message || '⚠️ Превышен лимит анализа фото.');
     return;
   }
 
@@ -443,6 +465,14 @@ bot.on('text', async (ctx: CustomContext) => {
       await showSubscriptionRequired(ctx);
       return;
     }
+    
+    // Rate limit AI coach (expensive OpenAI calls!)
+    const aiCoachLimit = checkRateLimit(ctx.from!.id, 'AI_COACH');
+    if (!aiCoachLimit.allowed) {
+      await ctx.reply(aiCoachLimit.message || '⚠️ Превышен лимит сообщений AI-коучу.');
+      return;
+    }
+    
     const text = (ctx.message as any)?.text || '';
     await handleAICoachMessageWrapper(ctx, text);
     return;
@@ -455,6 +485,14 @@ bot.on('text', async (ctx: CustomContext) => {
       await showSubscriptionRequired(ctx);
       return;
     }
+    
+    // Rate limit food text analysis
+    const foodTextLimit = checkRateLimit(ctx.from!.id, 'FOOD_TEXT_ANALYSIS');
+    if (!foodTextLimit.allowed) {
+      await ctx.reply(foodTextLimit.message || '⚠️ Превышен лимит анализа блюд.');
+      return;
+    }
+    
     const text = (ctx.message as any)?.text || '';
     await handleFoodTextInput(ctx, text);
     return;
@@ -480,6 +518,14 @@ bot.on('text', async (ctx: CustomContext) => {
       await showSubscriptionRequired(ctx);
       return;
     }
+    
+    // Rate limit AI coach (any text message goes to AI)
+    const aiCoachLimit = checkRateLimit(ctx.from!.id, 'AI_COACH');
+    if (!aiCoachLimit.allowed) {
+      await ctx.reply(aiCoachLimit.message || '⚠️ Превышен лимит сообщений AI-коучу.');
+      return;
+    }
+    
     const text = (ctx.message as any)?.text || '';
     if (text && text.trim().length > 0) {
       console.log('[Text Handler] Forwarding message to AI coach:', text.substring(0, 50));
@@ -868,6 +914,13 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
       await showMainMenu(ctx);
       break;
     case 'dashboard':
+      // Rate limit dashboard views
+      const dashboardLimit = checkRateLimit(ctx.from!.id, 'DASHBOARD_VIEW');
+      if (!dashboardLimit.allowed) {
+        await ctx.reply(dashboardLimit.message || '⚠️ Превышен лимит просмотров дашборда.');
+        return;
+      }
+      
       await clearUserSession(ctx.from!.id);
       ctx.currentStep = undefined;
       await showDashboardHandler(ctx);
@@ -913,6 +966,13 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
     case 'water_250':
     case 'water_500':
     case 'water_750':
+      // Rate limit water additions
+      const waterLimit = checkRateLimit(ctx.from!.id, 'ADD_WATER');
+      if (!waterLimit.allowed) {
+        await ctx.reply(waterLimit.message || '⚠️ Превышен лимит добавления воды.');
+        return;
+      }
+      
       const amount = parseInt(data.split('_')[1]);
       await addWater(ctx, amount);
       break;
@@ -1015,6 +1075,14 @@ export async function startBot(): Promise<void> {
 
     // Start subscription checker (runs every 12 hours)
     startSubscriptionChecker();
+    
+    // Start rate limiter cleanup (runs every hour)
+    startRateLimiterCleanup();
+    
+    // Log rate limiter stats every 6 hours
+    setInterval(() => {
+      logRateLimiterStats();
+    }, 6 * 60 * 60 * 1000);
 
     console.log('✅ Бот успешно запущен!');
   } catch (error) {
