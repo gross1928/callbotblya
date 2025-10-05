@@ -322,6 +322,10 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     );
     const targetMacros = calculateTargetMacros(targetCalories, data.goal);
 
+    // Calculate trial end date (3 days from now)
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 3);
+
     // Prepare profile data
     const profileData = {
       name: data.name,
@@ -339,6 +343,8 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
       target_protein: targetMacros.protein,
       target_fat: targetMacros.fat,
       target_carbs: targetMacros.carbs,
+      subscription_status: 'trial' as const,
+      trial_end_date: trialEndDate.toISOString(),
     };
 
     // Check if user already exists
@@ -371,6 +377,17 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
     const targetText = data.targetWeight ? `\n<b>Желаемый вес:</b> ${data.targetWeight} кг за ${data.targetDate} месяцев` : '';
     const actionText = existingUser ? 'обновлен' : 'создан';
     
+    // Trial message only for new users
+    const trialMessage = !existingUser ? `
+
+🎁 <b>Вам открыт демо-доступ на 3 дня!</b>
+
+Пользуйтесь всеми функциями бота на здоровье! 
+После окончания триала вы сможете оформить подписку всего за 199₽/месяц.
+
+⏰ Триал активен до: ${trialEndDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+` : '';
+    
     const successMessage = `
 🎉 <b>Профиль ${actionText} успешно!</b>
 
@@ -387,7 +404,7 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
 • Калории: ${targetCalories} ккал
 • Белки: ${targetMacros.protein}г
 • Жиры: ${targetMacros.fat}г
-• Углеводы: ${targetMacros.carbs}г
+• Углеводы: ${targetMacros.carbs}г${trialMessage}
 
 Теперь можешь начать отслеживать свое питание! 🍎
     `;

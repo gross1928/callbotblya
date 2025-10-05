@@ -18,6 +18,8 @@ import {
   parseKBZHU,
   createFoodAnalysisFromProduct,
 } from '../handlers/products';
+import { showSubscriptionPage, handleBuySubscription, hasActiveAccess, showSubscriptionRequired } from '../handlers/subscription';
+import { startSubscriptionChecker } from '../utils/subscription-checker';
 import { editOrReply } from '../utils/telegram';
 import type { BotContext } from '../types';
 
@@ -122,6 +124,12 @@ bot.command('dashboard', async (ctx: CustomContext) => {
     return;
   }
   
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
+    return;
+  }
+  
   await clearUserSession(ctx.from!.id);
   ctx.currentStep = undefined;
   await showDashboard(ctx);
@@ -131,6 +139,12 @@ bot.command('dashboard', async (ctx: CustomContext) => {
 bot.command('food', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
     await ctx.reply('Сначала создай профиль командой /profile');
+    return;
+  }
+  
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
     return;
   }
   
@@ -146,6 +160,12 @@ bot.command('water', async (ctx: CustomContext) => {
     return;
   }
   
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
+    return;
+  }
+  
   await clearUserSession(ctx.from!.id);
   ctx.currentStep = undefined;
   await showWaterMenu(ctx);
@@ -155,6 +175,12 @@ bot.command('water', async (ctx: CustomContext) => {
 bot.command('coach', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
     await ctx.reply('Сначала создай профиль командой /profile');
+    return;
+  }
+  
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
     return;
   }
   
@@ -169,9 +195,27 @@ bot.command('medical', async (ctx: CustomContext) => {
     return;
   }
   
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
+    return;
+  }
+  
   await clearUserSession(ctx.from!.id);
   ctx.currentStep = undefined;
   await showMedicalMenu(ctx);
+});
+
+// Subscription command
+bot.command('subscription', async (ctx: CustomContext) => {
+  if (ctx.isNewUser) {
+    await ctx.reply('Сначала создай профиль командой /profile');
+    return;
+  }
+  
+  await clearUserSession(ctx.from!.id);
+  ctx.currentStep = undefined;
+  await showSubscriptionPage(ctx);
 });
 
 // Help command
@@ -212,6 +256,12 @@ bot.on('photo', async (ctx: CustomContext) => {
     return;
   }
 
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
+    return;
+  }
+
   // Check if user is uploading medical data
   if (ctx.currentStep === 'medical_upload') {
     await handleMedicalPhotoAnalysis(ctx);
@@ -230,6 +280,12 @@ bot.on('photo', async (ctx: CustomContext) => {
 bot.on('document', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
     await ctx.reply('Сначала создай профиль командой /profile');
+    return;
+  }
+
+  // Check subscription access
+  if (!hasActiveAccess(ctx.user)) {
+    await showSubscriptionRequired(ctx);
     return;
   }
 
@@ -382,6 +438,11 @@ bot.on('text', async (ctx: CustomContext) => {
 
   // Handle AI coach messages
   if (ctx.currentStep === 'ai_coach') {
+    // Check subscription access
+    if (!hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
     const text = (ctx.message as any)?.text || '';
     await handleAICoachMessageWrapper(ctx, text);
     return;
@@ -389,6 +450,11 @@ bot.on('text', async (ctx: CustomContext) => {
 
   // Handle food text input
   if (ctx.currentStep === 'food_text') {
+    // Check subscription access
+    if (!hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
     const text = (ctx.message as any)?.text || '';
     await handleFoodTextInput(ctx, text);
     return;
@@ -396,6 +462,11 @@ bot.on('text', async (ctx: CustomContext) => {
 
   // Handle medical text input
   if (ctx.currentStep === 'medical_upload') {
+    // Check subscription access
+    if (!hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
     const text = (ctx.message as any)?.text || '';
     await handleMedicalTextInput(ctx, text);
     return;
@@ -404,6 +475,11 @@ bot.on('text', async (ctx: CustomContext) => {
   // Handle all other text messages as AI coach questions
   // (when no specific step is active)
   if (!ctx.currentStep) {
+    // Check subscription access
+    if (!hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
     const text = (ctx.message as any)?.text || '';
     if (text && text.trim().length > 0) {
       console.log('[Text Handler] Forwarding message to AI coach:', text.substring(0, 50));
@@ -441,6 +517,7 @@ async function showMainMenu(ctx: CustomContext) {
         [{ text: '🤖 AI-коуч', callback_data: 'ai_coach' }],
         [{ text: '🧪 Медицинские данные', callback_data: 'medical' }],
         [{ text: '👤 Профиль', callback_data: 'profile' }],
+        [{ text: '💳 Подписка', callback_data: 'subscription' }],
       ],
     },
   };
@@ -555,6 +632,27 @@ async function handleFoodPhotoInput(ctx: CustomContext): Promise<void> {
 
 async function handleCallbackQuery(ctx: CustomContext, data: string) {
   await ctx.answerCbQuery();
+
+  // Subscription callbacks (allowed without active access)
+  if (data === 'subscription') {
+    await clearUserSession(ctx.from!.id);
+    ctx.currentStep = undefined;
+    await showSubscriptionPage(ctx);
+    return;
+  }
+
+  if (data === 'buy_subscription') {
+    await handleBuySubscription(ctx);
+    return;
+  }
+
+  // Check subscription access for other actions (except profile and main_menu)
+  if (data !== 'profile' && data !== 'edit_profile' && data !== 'main_menu') {
+    if (ctx.user && !hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
+  }
 
   // Handle profile registration callbacks
   if (data.startsWith('gender_')) {
@@ -901,6 +999,7 @@ export async function startBot(): Promise<void> {
     try {
       await bot.telegram.setMyCommands([
         { command: 'start', description: '🏠 Главное меню' },
+        { command: 'subscription', description: '💳 Подписка' },
         { command: 'help', description: '❓ Помощь' },
       ]);
       console.log('✅ Bot commands set');
@@ -913,6 +1012,9 @@ export async function startBot(): Promise<void> {
       dropPendingUpdates: true, // Drop pending updates to avoid conflicts
     });
     console.log('Bot started with polling');
+
+    // Start subscription checker (runs every 12 hours)
+    startSubscriptionChecker();
 
     console.log('✅ Бот успешно запущен!');
   } catch (error) {

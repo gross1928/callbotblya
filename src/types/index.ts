@@ -17,6 +17,9 @@ export interface UserProfile {
   target_protein: number;
   target_fat: number;
   target_carbs: number;
+  subscription_status: SubscriptionStatus;
+  trial_end_date?: string;
+  subscription_end_date?: string;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +27,8 @@ export interface UserProfile {
 export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
 
 export type UserGoal = 'lose' | 'maintain' | 'gain';
+
+export type SubscriptionStatus = 'trial' | 'active' | 'expired';
 
 // Food Analysis Types
 export interface FoodAnalysis {
