@@ -746,8 +746,9 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
   // Handle cancel food
   if (data === 'cancel_food') {
     await clearUserSession(ctx.from!.id);
-    await ctx.reply('❌ Добавление еды отменено');
     ctx.currentStep = undefined;
+    await ctx.reply('❌ Добавление еды отменено');
+    await showMainMenu(ctx);
     return;
   }
 
