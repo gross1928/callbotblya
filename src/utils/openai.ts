@@ -68,7 +68,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
           ]
         }
       ],
-      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual JSON response fit
+      max_completion_tokens: 12000, // Increased significantly for reasoning model (gpt-5-nano) - needs space for reasoning + JSON response
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
@@ -186,7 +186,7 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
 }`
         }
       ],
-      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual JSON response fit
+      max_completion_tokens: 12000, // Increased significantly for reasoning model (gpt-5-nano) - needs space for reasoning + JSON response
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
       response_format: { type: "json_object" }
     });
@@ -377,7 +377,7 @@ ${medicalData.slice(0, 3).map((item: any, index: number) => {
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages,
-      max_completion_tokens: 8000, // Increased significantly for reasoning model with complex context (profile + dashboard + history + medical data)
+      max_completion_tokens: 12000, // Increased significantly for reasoning model with complex context (profile + dashboard + history + medical data)
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
@@ -469,7 +469,7 @@ export async function analyzeMedicalPhoto(imageUrl: string): Promise<{ text: str
           ]
         }
       ],
-      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual response fit
+      max_completion_tokens: 12000, // Increased significantly for reasoning model (gpt-5-nano) - needs space for reasoning + response
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
@@ -531,7 +531,7 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_completion_tokens: 6000, // Increased for reasoning model to ensure both reasoning + actual response fit
+      max_completion_tokens: 12000, // Increased significantly for reasoning model (gpt-5-nano) - needs space for reasoning + response
       // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
     });
 
