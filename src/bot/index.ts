@@ -3,7 +3,7 @@ import { config, validateConfig } from '../config';
 import { getUserByTelegramId, getUserSession, saveUserSession, clearUserSession } from '../database/queries';
 import { getUserProduct } from '../database/products-queries';
 import { handleProfileStep, handleGenderCallback, handleActivityCallback, handleGoalCallback } from '../handlers/profile';
-import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, saveFoodEntryById, handleFoodEdit, handleFoodEditById, showFoodHistory } from '../handlers/food';
+import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, saveFoodEntryById, handleFoodEdit, handleFoodEditById, handleFoodEditText, showFoodHistory } from '../handlers/food';
 import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
 import { addWater, showWaterMenu, showWaterHistory } from '../handlers/water';
 import { handleAICoachMessage, startAICoach, showPopularQuestions, showAITips } from '../handlers/ai-coach';
@@ -495,6 +495,27 @@ bot.on('text', async (ctx: CustomContext) => {
     
     const text = (ctx.message as any)?.text || '';
     await handleFoodTextInput(ctx, text);
+    return;
+  }
+
+  // Handle food editing text input
+  if (ctx.currentStep?.startsWith('edit_food_')) {
+    // Check subscription access
+    if (!hasActiveAccess(ctx.user)) {
+      await showSubscriptionRequired(ctx);
+      return;
+    }
+    
+    // Rate limit food text analysis (same as regular food text)
+    const foodEditLimit = checkRateLimit(ctx.from!.id, 'FOOD_TEXT_ANALYSIS');
+    if (!foodEditLimit.allowed) {
+      await ctx.reply(foodEditLimit.message || '⚠️ Превышен лимит анализа блюд.');
+      return;
+    }
+    
+    const text = (ctx.message as any)?.text || '';
+    const analysisId = ctx.currentStep.replace('edit_food_', '');
+    await handleFoodEditText(ctx, text, analysisId);
     return;
   }
 

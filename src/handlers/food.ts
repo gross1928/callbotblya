@@ -323,20 +323,98 @@ export async function handleFoodEditById(ctx: CustomContext, analysisId: string)
       return;
     }
 
-    await handleFoodEdit(ctx, analysis);
+    await handleFoodEdit(ctx, analysis, analysisId);
   } catch (error) {
     console.error('Error editing food:', error);
     await ctx.reply('❌ Ошибка при редактировании еды');
   }
 }
 
-export async function handleFoodEdit(ctx: CustomContext, analysis: FoodAnalysis): Promise<void> {
-  await ctx.reply(
-    '✏️ <b>Редактирование еды</b>\n\n' +
-    'Сейчас доступно только сохранение с текущими параметрами.\n' +
-    'Функция редактирования будет добавлена в следующих версиях.',
-    { parse_mode: 'HTML' }
-  );
+export async function handleFoodEdit(ctx: CustomContext, analysis: FoodAnalysis, analysisId: string): Promise<void> {
+  try {
+    // Save analysis ID and data to session for text handler
+    const session = await getUserSession(ctx.from!.id);
+    const tempData = session?.tempData || {};
+    tempData[analysisId] = analysis;
+    tempData['editing_analysis_id'] = analysisId; // Store which analysis we're editing
+    
+    const currentStep = `edit_food_${analysisId}`;
+    await saveUserSession(ctx.from!.id, currentStep, tempData);
+    
+    console.log(`[handleFoodEdit] Set editing mode for analysis ${analysisId}`);
+    
+    const currentInfo = `
+✏️ <b>Редактирование блюда</b>
+
+<b>Текущее блюдо:</b> ${analysis.name}
+<b>Вес:</b> ${analysis.weight}г
+<b>Ингредиенты:</b> ${analysis.ingredients.join(', ')}
+
+<b>Текущие КБЖУ:</b>
+• Калории: ${analysis.calories} ккал
+• Белки: ${analysis.protein}г | Жиры: ${analysis.fat}г | Углеводы: ${analysis.carbs}г
+
+<b>Что хочешь добавить или изменить?</b>
+
+Например:
+• "добавь 10г масла"
+• "еще 50г риса"
+• "убери банан"
+• "жареное на масле"
+
+Напиши дополнения к блюду:
+    `;
+    
+    await ctx.reply(currentInfo, { parse_mode: 'HTML' });
+  } catch (error) {
+    console.error('[handleFoodEdit] Error:', error);
+    await ctx.reply('❌ Ошибка при редактировании');
+  }
+}
+
+/**
+ * Handle food edit text input
+ */
+export async function handleFoodEditText(ctx: CustomContext, text: string, analysisId: string): Promise<void> {
+  try {
+    console.log(`[handleFoodEditText] Editing analysis ${analysisId} with text: ${text}`);
+    
+    // Get original analysis
+    const session = await getUserSession(ctx.from!.id);
+    const analysis = session?.tempData?.[analysisId];
+    
+    if (!analysis) {
+      await ctx.reply('❌ Анализ не найден. Попробуй заново добавить еду.');
+      await clearUserSession(ctx.from!.id);
+      return;
+    }
+    
+    await ctx.reply('🔍 Анализирую изменения...');
+    
+    // Create updated description combining original and additions
+    const originalDescription = `${analysis.name} ${analysis.weight}г (${analysis.ingredients.join(', ')})`;
+    const updatedDescription = `${originalDescription}. Дополнения: ${text}`;
+    
+    console.log(`[handleFoodEditText] Original: ${originalDescription}`);
+    console.log(`[handleFoodEditText] Updated: ${updatedDescription}`);
+    
+    // Re-analyze with updated description
+    const updatedAnalysis = await analyzeFoodFromText(updatedDescription);
+    
+    console.log(`[handleFoodEditText] Updated analysis:`, updatedAnalysis);
+    
+    // Show updated analysis with same flow as original
+    await showFoodAnalysis(ctx, updatedAnalysis);
+    
+    // Clear editing session
+    await clearUserSession(ctx.from!.id);
+    ctx.currentStep = undefined;
+    
+  } catch (error) {
+    console.error('[handleFoodEditText] Error:', error);
+    await ctx.reply('❌ Не удалось обработать изменения. Попробуй еще раз или добавь блюдо заново.');
+    await clearUserSession(ctx.from!.id);
+  }
 }
 
 /**
