@@ -1,4 +1,9 @@
 import { supabase } from './client';
+import type { UserProduct } from '../types';
+
+// ============================================
+// NUTRITION DATABASE (700+ products)
+// ============================================
 
 export interface ProductNutrition {
   id: number;
@@ -158,5 +163,118 @@ export async function getProductsCount(): Promise<number> {
   } catch (error) {
     console.error('[getProductsCount] Error:', error);
     return 0;
+  }
+}
+
+// ============================================
+// USER PRODUCTS (custom user products)
+// ============================================
+
+/**
+ * Get user products with pagination
+ */
+export async function getUserProductsPaginated(
+  userId: number,
+  page: number = 0,
+  limit: number = 6
+): Promise<{ products: UserProduct[]; total: number; hasMore: boolean }> {
+  try {
+    const from = page * limit;
+    const to = from + limit - 1;
+
+    // Get products with count
+    const { data, error, count } = await supabase
+      .from('user_products')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error('[getUserProductsPaginated] Error:', error);
+      return { products: [], total: 0, hasMore: false };
+    }
+
+    const total = count || 0;
+    const hasMore = to < total - 1;
+
+    return {
+      products: data || [],
+      total,
+      hasMore,
+    };
+  } catch (error) {
+    console.error('[getUserProductsPaginated] Error:', error);
+    return { products: [], total: 0, hasMore: false };
+  }
+}
+
+/**
+ * Get single user product by ID
+ */
+export async function getUserProduct(userId: number, productId: number): Promise<UserProduct | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_products')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('id', productId)
+      .single();
+
+    if (error) {
+      console.error('[getUserProduct] Error:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[getUserProduct] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Add new user product
+ */
+export async function addUserProduct(product: Omit<UserProduct, 'id' | 'created_at'>): Promise<UserProduct | null> {
+  try {
+    const { data, error } = await supabase
+      .from('user_products')
+      .insert([product])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[addUserProduct] Error:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[addUserProduct] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete user product
+ */
+export async function deleteUserProduct(userId: number, productId: number): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('user_products')
+      .delete()
+      .eq('user_id', userId)
+      .eq('id', productId);
+
+    if (error) {
+      console.error('[deleteUserProduct] Error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[deleteUserProduct] Error:', error);
+    return false;
   }
 }
