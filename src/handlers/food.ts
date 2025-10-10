@@ -391,12 +391,23 @@ export async function handleFoodEditText(ctx: CustomContext, text: string, analy
     
     await ctx.reply('🔍 Анализирую изменения...');
     
-    // Create updated description combining original and additions
-    const originalDescription = `${analysis.name} ${analysis.weight}г (${analysis.ingredients.join(', ')})`;
-    const updatedDescription = `${originalDescription}. Дополнения: ${text}`;
+    // Determine if this is a correction or an addition based on user's text
+    const lowerText = text.toLowerCase();
+    const isCorrectionKeywords = ['не ', 'нет', 'ошиб', 'неправильно', 'на самом деле', 'это '];
+    const isCorrection = isCorrectionKeywords.some(keyword => lowerText.includes(keyword));
     
-    console.log(`[handleFoodEditText] Original: ${originalDescription}`);
-    console.log(`[handleFoodEditText] Updated: ${updatedDescription}`);
+    let updatedDescription: string;
+    
+    if (isCorrection) {
+      // If user is correcting the recognition, use only their text with a clear instruction
+      updatedDescription = `Исходный анализ был неверным. Правильное описание: ${text}`;
+      console.log(`[handleFoodEditText] Detected correction. New description: ${updatedDescription}`);
+    } else {
+      // If user is adding to the meal, combine with original
+      const originalDescription = `${analysis.name} ${analysis.weight}г (${analysis.ingredients.join(', ')})`;
+      updatedDescription = `${originalDescription}. Дополнительно: ${text}`;
+      console.log(`[handleFoodEditText] Detected addition. Original: ${originalDescription}, Updated: ${updatedDescription}`);
+    }
     
     // Re-analyze with updated description
     const updatedAnalysis = await analyzeFoodFromText(updatedDescription);
