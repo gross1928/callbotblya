@@ -23,6 +23,7 @@ export function calculateTDEE(bmr: number, activityLevel: ActivityLevel): number
 
 /**
  * Calculate target calories based on goal and timeframe
+ * Using moderate deficit/surplus (300-500 kcal) for sustainable progress
  */
 export function calculateTargetCalories(tdee: number, goal: string, targetDateMonths?: number, targetWeight?: number, currentWeight?: number): number {
   let deficit = 0;
@@ -33,27 +34,27 @@ export function calculateTargetCalories(tdee: number, goal: string, targetDateMo
     const weightLossPerMonth = weightToLose / targetDateMonths;
     const weightLossPerWeek = weightLossPerMonth / 4.33; // weeks per month
     
-    // 1kg = ~7700 calories, so for aggressive weight loss
+    // 1kg = ~7700 calories, moderate deficit for muscle preservation
     deficit = Math.round(weightLossPerWeek * 1100); // 1100 cal per 1kg/week
-    deficit = Math.min(deficit, 1000); // Max 1000 cal deficit for safety
+    deficit = Math.min(deficit, 500); // Max 500 cal deficit (trainer recommendation)
     deficit = Math.max(deficit, 300); // Min 300 cal deficit
   } else if (goal === 'gain' && targetDateMonths && targetWeight && currentWeight) {
     const weightToGain = targetWeight - currentWeight;
     const weightGainPerMonth = weightToGain / targetDateMonths;
     const weightGainPerWeek = weightGainPerMonth / 4.33;
     
-    // 1kg = ~7700 calories, so for muscle gain
+    // Moderate surplus to minimize fat gain
     surplus = Math.round(weightGainPerWeek * 700); // 700 cal per 1kg/week
-    surplus = Math.min(surplus, 800); // Max 800 cal surplus
-    surplus = Math.max(surplus, 200); // Min 200 cal surplus
+    surplus = Math.min(surplus, 500); // Max 500 cal surplus (trainer recommendation)
+    surplus = Math.max(surplus, 300); // Min 300 cal surplus
   } else {
-    // Fallback to standard values
+    // Fallback to standard moderate values (300-500 kcal range)
     switch (goal) {
       case 'lose':
-        deficit = 500;
+        deficit = 400; // Moderate deficit
         break;
       case 'gain':
-        surplus = 300;
+        surplus = 400; // Moderate surplus
         break;
     }
   }
@@ -70,39 +71,54 @@ export function calculateTargetCalories(tdee: number, goal: string, targetDateMo
 }
 
 /**
- * Calculate target macronutrients
+ * Calculate target macronutrients based on body weight
+ * Using scientifically proven formulas from professional trainer
  */
-export function calculateTargetMacros(targetCalories: number, goal: string) {
-  let proteinRatio: number;
-  let fatRatio: number;
-  let carbsRatio: number;
+export function calculateTargetMacros(targetCalories: number, goal: string, weight: number) {
+  let proteinGrams: number;
+  let fatGrams: number;
+  let carbsGrams: number;
 
+  // Protein: always 1.6g per kg (proven optimal for all goals)
+  proteinGrams = Math.round(weight * 1.6);
+  
   switch (goal) {
     case 'lose':
-      // Higher protein for weight loss
-      proteinRatio = 0.35;
-      fatRatio = 0.25;
-      carbsRatio = 0.40;
+      // Fat: 0.8g per kg
+      fatGrams = Math.round(weight * 0.8);
+      // Carbs: start with 5g per kg (can be reduced over time)
+      // Using 4g for moderate deficit to avoid too aggressive cuts
+      carbsGrams = Math.round(weight * 4);
       break;
+      
     case 'gain':
-      // Higher carbs for muscle gain
-      proteinRatio = 0.25;
-      fatRatio = 0.25;
-      carbsRatio = 0.50;
+      // Fat: 1g per kg (slightly higher for muscle gain)
+      fatGrams = Math.round(weight * 1.0);
+      // Carbs: 6-9g per kg (starting with 6g for moderate surplus)
+      carbsGrams = Math.round(weight * 6);
       break;
+      
     case 'maintain':
     default:
-      // Balanced macros
-      proteinRatio = 0.30;
-      fatRatio = 0.25;
-      carbsRatio = 0.45;
+      // Fat: 0.8g per kg
+      fatGrams = Math.round(weight * 0.8);
+      // Carbs: 5g per kg (maintenance level)
+      carbsGrams = Math.round(weight * 5);
       break;
   }
 
+  // Verify total calories match (adjust carbs if needed)
+  const proteinCalories = proteinGrams * 4;
+  const fatCalories = fatGrams * 9;
+  const remainingCalories = targetCalories - proteinCalories - fatCalories;
+  
+  // Recalculate carbs based on remaining calories
+  const adjustedCarbs = Math.max(Math.round(remainingCalories / 4), 0);
+  
   return {
-    protein: Math.round((targetCalories * proteinRatio) / 4), // 4 cal/g
-    fat: Math.round((targetCalories * fatRatio) / 9), // 9 cal/g
-    carbs: Math.round((targetCalories * carbsRatio) / 4), // 4 cal/g
+    protein: proteinGrams,
+    fat: fatGrams,
+    carbs: adjustedCarbs,
   };
 }
 

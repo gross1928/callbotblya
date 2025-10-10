@@ -320,7 +320,7 @@ async function finishProfileRegistration(ctx: CustomContext, data: ProfileData):
       data.targetWeight, 
       data.weight
     );
-    const targetMacros = calculateTargetMacros(targetCalories, data.goal);
+    const targetMacros = calculateTargetMacros(targetCalories, data.goal, data.weight);
 
     // Calculate trial end date (3 days from now)
     const trialEndDate = new Date();
