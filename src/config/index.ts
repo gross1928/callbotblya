@@ -44,6 +44,11 @@ export const config = {
     active: 1.725,
     very_active: 1.9,
   },
+
+  // Food analysis settings
+  food: {
+    useProductsDatabase: process.env.USE_PRODUCTS_DATABASE === 'true', // Enable accurate nutrition from database
+  },
 } as const;
 
 // Validation

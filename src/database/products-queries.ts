@@ -1,184 +1,132 @@
-import { supabase } from './client';
-import type { UserProduct } from '../types';
+import { pool } from './client';
+
+export interface ProductNutrition {
+  id: number;
+  name: string;
+  category: string;
+  protein: number;
+  fat: number;
+  carbs: number;
+  calories: number;
+}
+
+export interface ProductSearchResult extends ProductNutrition {
+  similarity?: number;
+}
 
 /**
- * Получить продукты пользователя
+ * Search for a product by name using fuzzy matching
  */
-export async function getUserProducts(userId: number): Promise<UserProduct[]> {
+export async function searchProduct(productName: string, limit: number = 5): Promise<ProductSearchResult[]> {
   try {
-    const { data, error } = await supabase
-      .from('user_products')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching user products:', error);
-      throw error;
+    const normalized = productName.toLowerCase().trim();
+    
+    // Try exact match first
+    const exactMatch = await pool.query<ProductNutrition>(
+      `SELECT id, name, category, protein, fat, carbs, calories
+       FROM products_nutrition
+       WHERE name_normalized = $1
+       LIMIT 1`,
+      [normalized]
+    );
+    
+    if (exactMatch.rows.length > 0) {
+      console.log(`[searchProduct] Exact match found for "${productName}": ${exactMatch.rows[0].name}`);
+      return exactMatch.rows.map(row => ({ ...row, similarity: 1.0 }));
     }
 
-    return data || [];
+    // Try fuzzy match using trigram similarity
+    const fuzzyMatch = await pool.query<ProductNutrition & { similarity: number }>(
+      `SELECT id, name, category, protein, fat, carbs, calories,
+              similarity(name_normalized, $1) as similarity
+       FROM products_nutrition
+       WHERE similarity(name_normalized, $1) > 0.3
+       ORDER BY similarity DESC
+       LIMIT $2`,
+      [normalized, limit]
+    );
+
+    if (fuzzyMatch.rows.length > 0) {
+      console.log(`[searchProduct] Fuzzy matches for "${productName}":`, 
+        fuzzyMatch.rows.map(r => `${r.name} (${(r.similarity * 100).toFixed(0)}%)`));
+    } else {
+      console.log(`[searchProduct] No matches found for "${productName}"`);
+    }
+
+    return fuzzyMatch.rows;
   } catch (error) {
-    console.error('Error in getUserProducts:', error);
-    throw error;
+    console.error('[searchProduct] Error searching product:', error);
+    return [];
   }
 }
 
 /**
- * Получить продукты пользователя с пагинацией
+ * Get product by exact ID
  */
-export async function getUserProductsPaginated(
-  userId: number,
-  page: number = 0,
-  pageSize: number = 8
-): Promise<{ products: UserProduct[]; total: number; hasMore: boolean }> {
+export async function getProductById(id: number): Promise<ProductNutrition | null> {
   try {
-    // Получаем общее количество продуктов
-    const { count, error: countError } = await supabase
-      .from('user_products')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
-
-    if (countError) {
-      console.error('Error counting user products:', countError);
-      throw countError;
-    }
-
-    const total = count || 0;
-
-    // Получаем продукты для текущей страницы
-    const { data, error } = await supabase
-      .from('user_products')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1);
-
-    if (error) {
-      console.error('Error fetching user products:', error);
-      throw error;
-    }
-
-    const products = data || [];
-    const hasMore = (page + 1) * pageSize < total;
-
-    return { products, total, hasMore };
+    const result = await pool.query<ProductNutrition>(
+      'SELECT id, name, category, protein, fat, carbs, calories FROM products_nutrition WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || null;
   } catch (error) {
-    console.error('Error in getUserProductsPaginated:', error);
-    throw error;
-  }
-}
-
-/**
- * Получить продукт по ID
- */
-export async function getUserProduct(userId: number, productId: number): Promise<UserProduct | null> {
-  try {
-    const { data, error } = await supabase
-      .from('user_products')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('id', productId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user product:', error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in getUserProduct:', error);
+    console.error('[getProductById] Error:', error);
     return null;
   }
 }
 
 /**
- * Добавить новый продукт
+ * Calculate nutrition for a specific weight of product
  */
-export async function addUserProduct(
-  userId: number,
-  name: string,
-  calories: number,
-  protein: number,
-  fat: number,
-  carbs: number
-): Promise<UserProduct> {
+export function calculateNutritionForWeight(
+  product: ProductNutrition,
+  weightInGrams: number
+): {
+  name: string;
+  weight: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  calories: number;
+} {
+  const ratio = weightInGrams / 100; // Products are per 100g
+
+  return {
+    name: product.name,
+    weight: weightInGrams,
+    protein: Math.round(product.protein * ratio * 10) / 10,
+    fat: Math.round(product.fat * ratio * 10) / 10,
+    carbs: Math.round(product.carbs * ratio * 10) / 10,
+    calories: Math.round(product.calories * ratio)
+  };
+}
+
+/**
+ * Get all products in a category
+ */
+export async function getProductsByCategory(category: string): Promise<ProductNutrition[]> {
   try {
-    const { data, error } = await supabase
-      .from('user_products')
-      .insert({
-        user_id: userId,
-        name,
-        calories,
-        protein,
-        fat,
-        carbs,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding user product:', error);
-      throw error;
-    }
-
-    return data;
+    const result = await pool.query<ProductNutrition>(
+      'SELECT id, name, category, protein, fat, carbs, calories FROM products_nutrition WHERE category = $1 ORDER BY name',
+      [category]
+    );
+    return result.rows;
   } catch (error) {
-    console.error('Error in addUserProduct:', error);
-    throw error;
+    console.error('[getProductsByCategory] Error:', error);
+    return [];
   }
 }
 
 /**
- * Удалить продукт
+ * Get total count of products in database
  */
-export async function deleteUserProduct(userId: number, productId: number): Promise<boolean> {
+export async function getProductsCount(): Promise<number> {
   try {
-    const { error } = await supabase
-      .from('user_products')
-      .delete()
-      .eq('user_id', userId)
-      .eq('id', productId);
-
-    if (error) {
-      console.error('Error deleting user product:', error);
-      throw error;
-    }
-
-    return true;
+    const result = await pool.query('SELECT COUNT(*) as count FROM products_nutrition');
+    return parseInt(result.rows[0].count);
   } catch (error) {
-    console.error('Error in deleteUserProduct:', error);
-    return false;
+    console.error('[getProductsCount] Error:', error);
+    return 0;
   }
 }
-
-/**
- * Обновить продукт
- */
-export async function updateUserProduct(
-  userId: number,
-  productId: number,
-  updates: Partial<Pick<UserProduct, 'name' | 'calories' | 'protein' | 'fat' | 'carbs'>>
-): Promise<UserProduct | null> {
-  try {
-    const { data, error } = await supabase
-      .from('user_products')
-      .update(updates)
-      .eq('user_id', userId)
-      .eq('id', productId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating user product:', error);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error in updateUserProduct:', error);
-    return null;
-  }
-}
-

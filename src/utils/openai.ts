@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { config } from '../config';
 import type { FoodAnalysis } from '../types';
+import { searchProduct, calculateNutritionForWeight, ProductNutrition } from '../database/products-queries';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -560,4 +561,313 @@ ${userProfile ? `Профиль пациента: ${userProfile.name}, ${userPro
     console.error('Error analyzing medical data:', error);
     throw new Error('Не удалось проанализировать медицинские данные. Попробуй еще раз или обратись к врачу.');
   }
+}
+
+/**
+ * Interface for ingredient recognition
+ */
+interface FoodIngredient {
+  product: string;
+  weight: number;
+}
+
+interface FoodIngredientAnalysis {
+  dish_name: string;
+  ingredients: FoodIngredient[];
+}
+
+/**
+ * Analyze food and recognize only ingredients and weights (without calculating nutrition)
+ * AI just identifies products, database provides accurate nutrition
+ */
+export async function analyzeFoodIngredientsOnly(description: string, isPhotoAnalysis: boolean = false): Promise<FoodIngredientAnalysis> {
+  try {
+    const prompt = isPhotoAnalysis
+      ? `Проанализируй фото еды и определи:
+1. Название блюда
+2. Список всех ингредиентов с их примерным весом в граммах
+
+ВАЖНО:
+- Определяй ВСЕ видимые ингредиенты (основные продукты)
+- Вес укажи для каждого ингредиента отдельно
+- Если жареное - укажи масло (5-10г)
+- Для салатов - укажи каждый овощ отдельно
+- Будь реалистичен с весом
+
+Ответь ТОЛЬКО в формате JSON:
+{
+  "dish_name": "название блюда",
+  "ingredients": [
+    {"product": "название продукта", "weight": вес_в_граммах},
+    {"product": "название продукта 2", "weight": вес_в_граммах}
+  ]
+}`
+      : `Проанализируй описание еды: "${description}"
+
+Определи:
+1. Название блюда (если неясно - предложи похожее)
+2. Список всех ингредиентов с их весом
+
+ВАЖНО:
+- Извлекай ВСЕ упомянутые продукты
+- Если вес не указан - используй стандартные порции
+- Если указан способ приготовления "жареное" - добавь масло 5-10г
+- Каждый продукт - отдельная строка
+
+Ответь ТОЛЬКО в формате JSON:
+{
+  "dish_name": "название блюда",
+  "ingredients": [
+    {"product": "название продукта", "weight": вес_в_граммах},
+    {"product": "название продукта 2", "weight": вес_в_граммах}
+  ]
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: config.openai.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'Ты эксперт по питанию. Распознавай продукты и их вес из описаний еды. Отвечай ТОЛЬКО валидным JSON.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_completion_tokens: 2000,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('[analyzeFoodIngredientsOnly] OpenAI response:', content);
+
+    const analysis: FoodIngredientAnalysis = JSON.parse(content);
+    
+    if (!analysis.ingredients || analysis.ingredients.length === 0) {
+      throw new Error('Не удалось определить ингредиенты');
+    }
+
+    return analysis;
+  } catch (error) {
+    console.error('[analyzeFoodIngredientsOnly] Error:', error);
+    throw new Error('Не удалось распознать ингредиенты. Попробуй описать подробнее.');
+  }
+}
+
+/**
+ * Enrich ingredient analysis with accurate nutrition from database
+ */
+export async function enrichWithDatabaseNutrition(analysis: FoodIngredientAnalysis): Promise<FoodAnalysis> {
+  console.log('[enrichWithDatabaseNutrition] Processing:', analysis);
+  
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalFat = 0;
+  let totalCarbs = 0;
+  let totalWeight = 0;
+  const recognizedIngredients: string[] = [];
+  
+  for (const ingredient of analysis.ingredients) {
+    console.log(`[enrichWithDatabaseNutrition] Searching for: ${ingredient.product} (${ingredient.weight}g)`);
+    
+    // Search in database
+    const products = await searchProduct(ingredient.product, 3);
+    
+    if (products.length > 0 && products[0].similarity && products[0].similarity > 0.4) {
+      // Found in database - use accurate data
+      const bestMatch = products[0];
+      console.log(`[enrichWithDatabaseNutrition] Found match: ${bestMatch.name} (similarity: ${bestMatch.similarity})`);
+      
+      const nutrition = calculateNutritionForWeight(bestMatch, ingredient.weight);
+      
+      totalCalories += nutrition.calories;
+      totalProtein += nutrition.protein;
+      totalFat += nutrition.fat;
+      totalCarbs += nutrition.carbs;
+      totalWeight += ingredient.weight;
+      
+      recognizedIngredients.push(`${bestMatch.name} ${ingredient.weight}г`);
+      
+      console.log(`[enrichWithDatabaseNutrition] Added nutrition:`, nutrition);
+    } else {
+      // Not found - use AI estimation (fallback)
+      console.log(`[enrichWithDatabaseNutrition] Product not found in database: ${ingredient.product}, using AI estimation`);
+      
+      const aiEstimate = await estimateNutritionWithAI(ingredient.product, ingredient.weight);
+      
+      totalCalories += aiEstimate.calories;
+      totalProtein += aiEstimate.protein;
+      totalFat += aiEstimate.fat;
+      totalCarbs += aiEstimate.carbs;
+      totalWeight += ingredient.weight;
+      
+      recognizedIngredients.push(`${ingredient.product} ${ingredient.weight}г`);
+    }
+  }
+  
+  console.log('[enrichWithDatabaseNutrition] Total nutrition:', {
+    calories: totalCalories,
+    protein: totalProtein,
+    fat: totalFat,
+    carbs: totalCarbs,
+    weight: totalWeight
+  });
+  
+  return {
+    name: analysis.dish_name,
+    ingredients: recognizedIngredients,
+    weight: totalWeight,
+    calories: Math.round(totalCalories),
+    protein: Math.round(totalProtein * 10) / 10,
+    fat: Math.round(totalFat * 10) / 10,
+    carbs: Math.round(totalCarbs * 10) / 10
+  };
+}
+
+/**
+ * Estimate nutrition with AI as fallback when product not in database
+ */
+async function estimateNutritionWithAI(product: string, weight: number): Promise<{
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+}> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: config.openai.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'Ты эксперт-нутрициолог. Оценивай КБЖУ продуктов консервативно (лучше занизить, чем завысить).'
+        },
+        {
+          role: 'user',
+          content: `Оцени КБЖУ для: ${product} ${weight}г
+          
+Ответь ТОЛЬКО JSON:
+{
+  "calories": калории,
+  "protein": белки_в_граммах,
+  "fat": жиры_в_граммах,
+  "carbs": углеводы_в_граммах
+}`
+        }
+      ],
+      max_completion_tokens: 500,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No AI estimation');
+    }
+
+    return JSON.parse(content);
+  } catch (error) {
+    console.error('[estimateNutritionWithAI] Error:', error);
+    // Return conservative estimates if AI fails
+    return {
+      calories: weight * 1.5, // Very conservative: ~150 kcal per 100g
+      protein: weight * 0.05,
+      fat: weight * 0.03,
+      carbs: weight * 0.25
+    };
+  }
+}
+
+/**
+ * Analyze food from photo using database (NEW METHOD)
+ */
+export async function analyzeFoodFromPhotoWithDB(imageUrl: string): Promise<FoodAnalysis> {
+  try {
+    // Step 1: AI recognizes ingredients and weights
+    const ingredientsAnalysis = await analyzeFoodIngredientsFromPhoto(imageUrl);
+    
+    // Step 2: Database provides accurate nutrition
+    return await enrichWithDatabaseNutrition(ingredientsAnalysis);
+  } catch (error) {
+    console.error('[analyzeFoodFromPhotoWithDB] Error:', error);
+    // Fallback to old method
+    return await analyzeFoodFromPhoto(imageUrl);
+  }
+}
+
+/**
+ * Analyze food from text using database (NEW METHOD)
+ */
+export async function analyzeFoodFromTextWithDB(description: string): Promise<FoodAnalysis> {
+  try {
+    // Step 1: AI recognizes ingredients and weights
+    const ingredientsAnalysis = await analyzeFoodIngredientsOnly(description, false);
+    
+    // Step 2: Database provides accurate nutrition
+    return await enrichWithDatabaseNutrition(ingredientsAnalysis);
+  } catch (error) {
+    console.error('[analyzeFoodFromTextWithDB] Error:', error);
+    // Fallback to old method
+    return await analyzeFoodFromText(description);
+  }
+}
+
+/**
+ * Analyze ingredients from photo
+ */
+async function analyzeFoodIngredientsFromPhoto(imageUrl: string): Promise<FoodIngredientAnalysis> {
+  const response = await openai.chat.completions.create({
+    model: config.openai.visionModel,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Проанализируй фото еды и определи:
+1. Название блюда
+2. Список всех ингредиентов с их примерным весом в граммах
+
+ВАЖНО:
+- Определяй ВСЕ видимые ингредиенты
+- Вес укажи для каждого ингредиента отдельно
+- Если видна корочка/блеск от масла - укажи масло (5-10г)
+- Будь реалистичен с весом
+
+Ответь ТОЛЬКО в формате JSON:
+{
+  "dish_name": "название блюда",
+  "ingredients": [
+    {"product": "название продукта", "weight": вес_в_граммах}
+  ]
+}`
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageUrl,
+              detail: 'high'
+            }
+          }
+        ]
+      }
+    ],
+    max_completion_tokens: 2000
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('No response from Vision API');
+  }
+
+  // Extract JSON from response
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('Invalid response format');
+  }
+
+  return JSON.parse(jsonMatch[0]);
 }
