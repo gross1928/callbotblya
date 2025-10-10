@@ -209,14 +209,18 @@ export async function handleAddProductComplete(
   kbzhu: { calories: number; protein: number; fat: number; carbs: number }
 ): Promise<{ text: string; keyboard: any; product: UserProduct }> {
   try {
-    const product = await addUserProduct(
-      userId,
-      productName,
-      kbzhu.calories,
-      kbzhu.protein,
-      kbzhu.fat,
-      kbzhu.carbs
-    );
+    const product = await addUserProduct({
+      user_id: userId,
+      name: productName,
+      calories: kbzhu.calories,
+      protein: kbzhu.protein,
+      fat: kbzhu.fat,
+      carbs: kbzhu.carbs,
+    });
+
+    if (!product) {
+      throw new Error('Failed to add product');
+    }
 
     const text = 
       '✅ <b>Продукт успешно добавлен!</b>\n\n' +
