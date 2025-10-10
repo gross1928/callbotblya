@@ -1,11 +1,24 @@
 /**
  * Script to parse tablica_caloriynosti.md and import products into database
  * Run with: npx ts-node scripts/import-products.ts
+ * 
+ * Requirements:
+ * - DIRECT_DATABASE_URL in .env (get from Supabase: Settings > Database > Connection string > URI)
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { pool } from '../src/database/client';
+import { Pool } from 'pg';
+import * as dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// Create direct PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DIRECT_DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 interface Product {
   name: string;

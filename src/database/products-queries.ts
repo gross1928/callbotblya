@@ -1,4 +1,4 @@
-import { pool } from './client';
+import { supabase } from './client';
 
 export interface ProductNutrition {
   id: number;
@@ -22,38 +22,46 @@ export async function searchProduct(productName: string, limit: number = 5): Pro
     const normalized = productName.toLowerCase().trim();
     
     // Try exact match first
-    const exactMatch = await pool.query<ProductNutrition>(
-      `SELECT id, name, category, protein, fat, carbs, calories
-       FROM products_nutrition
-       WHERE name_normalized = $1
-       LIMIT 1`,
-      [normalized]
-    );
+    const { data: exactMatch, error: exactError } = await supabase
+      .from('products_nutrition')
+      .select('id, name, category, protein, fat, carbs, calories')
+      .eq('name_normalized', normalized)
+      .limit(1);
     
-    if (exactMatch.rows.length > 0) {
-      console.log(`[searchProduct] Exact match found for "${productName}": ${exactMatch.rows[0].name}`);
-      return exactMatch.rows.map(row => ({ ...row, similarity: 1.0 }));
+    if (exactError) {
+      console.error('[searchProduct] Exact match error:', exactError);
+    }
+    
+    if (exactMatch && exactMatch.length > 0) {
+      console.log(`[searchProduct] Exact match found for "${productName}": ${exactMatch[0].name}`);
+      return exactMatch.map(row => ({ ...row, similarity: 1.0 }));
     }
 
-    // Try fuzzy match using trigram similarity
-    const fuzzyMatch = await pool.query<ProductNutrition & { similarity: number }>(
-      `SELECT id, name, category, protein, fat, carbs, calories,
-              similarity(name_normalized, $1) as similarity
-       FROM products_nutrition
-       WHERE similarity(name_normalized, $1) > 0.3
-       ORDER BY similarity DESC
-       LIMIT $2`,
-      [normalized, limit]
-    );
+    // Fallback: search by partial match (contains)
+    const { data: fuzzyMatch, error: fuzzyError } = await supabase
+      .from('products_nutrition')
+      .select('id, name, category, protein, fat, carbs, calories')
+      .ilike('name_normalized', `%${normalized}%`)
+      .limit(limit);
 
-    if (fuzzyMatch.rows.length > 0) {
+    if (fuzzyError) {
+      console.error('[searchProduct] Fuzzy match error:', fuzzyError);
+      return [];
+    }
+
+    if (fuzzyMatch && fuzzyMatch.length > 0) {
       console.log(`[searchProduct] Fuzzy matches for "${productName}":`, 
-        fuzzyMatch.rows.map(r => `${r.name} (${(r.similarity * 100).toFixed(0)}%)`));
+        fuzzyMatch.map(r => r.name));
+      // Calculate simple similarity based on length difference
+      return fuzzyMatch.map(row => ({
+        ...row,
+        similarity: 1 - (Math.abs(row.name.length - productName.length) / Math.max(row.name.length, productName.length))
+      }));
     } else {
       console.log(`[searchProduct] No matches found for "${productName}"`);
     }
 
-    return fuzzyMatch.rows;
+    return [];
   } catch (error) {
     console.error('[searchProduct] Error searching product:', error);
     return [];
@@ -65,11 +73,18 @@ export async function searchProduct(productName: string, limit: number = 5): Pro
  */
 export async function getProductById(id: number): Promise<ProductNutrition | null> {
   try {
-    const result = await pool.query<ProductNutrition>(
-      'SELECT id, name, category, protein, fat, carbs, calories FROM products_nutrition WHERE id = $1',
-      [id]
-    );
-    return result.rows[0] || null;
+    const { data, error } = await supabase
+      .from('products_nutrition')
+      .select('id, name, category, protein, fat, carbs, calories')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('[getProductById] Error:', error);
+      return null;
+    }
+    
+    return data;
   } catch (error) {
     console.error('[getProductById] Error:', error);
     return null;
@@ -107,11 +122,18 @@ export function calculateNutritionForWeight(
  */
 export async function getProductsByCategory(category: string): Promise<ProductNutrition[]> {
   try {
-    const result = await pool.query<ProductNutrition>(
-      'SELECT id, name, category, protein, fat, carbs, calories FROM products_nutrition WHERE category = $1 ORDER BY name',
-      [category]
-    );
-    return result.rows;
+    const { data, error } = await supabase
+      .from('products_nutrition')
+      .select('id, name, category, protein, fat, carbs, calories')
+      .eq('category', category)
+      .order('name');
+    
+    if (error) {
+      console.error('[getProductsByCategory] Error:', error);
+      return [];
+    }
+    
+    return data || [];
   } catch (error) {
     console.error('[getProductsByCategory] Error:', error);
     return [];
@@ -123,8 +145,16 @@ export async function getProductsByCategory(category: string): Promise<ProductNu
  */
 export async function getProductsCount(): Promise<number> {
   try {
-    const result = await pool.query('SELECT COUNT(*) as count FROM products_nutrition');
-    return parseInt(result.rows[0].count);
+    const { count, error } = await supabase
+      .from('products_nutrition')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('[getProductsCount] Error:', error);
+      return 0;
+    }
+    
+    return count || 0;
   } catch (error) {
     console.error('[getProductsCount] Error:', error);
     return 0;
