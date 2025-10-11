@@ -150,18 +150,27 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
     let useApiMode = false;
 
     // Try to create payment via ЮKassa API if credentials are configured
+    console.log('[Subscription] Checking ЮKassa config:', {
+      hasShopId: !!config.yookassa?.shopId,
+      hasSecretKey: !!config.yookassa?.secretKey,
+      shopIdLength: config.yookassa?.shopId?.length,
+      secretKeyLength: config.yookassa?.secretKey?.length,
+    });
+
     if (config.yookassa?.shopId && config.yookassa?.secretKey) {
       try {
-        console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId);
+        console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId, 'amount: 1₽');
         paymentUrl = await createPayment(telegramId, 1); // TEST: 1₽ for testing
         useApiMode = true;
-        console.log('[Subscription] Payment created successfully');
+        console.log('[Subscription] Payment created successfully, URL:', paymentUrl.substring(0, 50) + '...');
       } catch (error) {
-        console.error('[Subscription] Failed to create payment via API, using fallback:', error);
+        console.error('[Subscription] Failed to create payment via API:', error);
+        console.error('[Subscription] Error details:', error instanceof Error ? error.message : String(error));
+        console.error('[Subscription] Using fallback link instead');
         paymentUrl = config.yookassa.fallbackPaymentUrl;
       }
     } else {
-      console.log('[Subscription] ЮKassa API not configured, using fallback link');
+      console.log('[Subscription] ЮKassa API not configured (missing shopId or secretKey), using fallback link');
       paymentUrl = config.yookassa?.fallbackPaymentUrl || 'https://yookassa.ru/my/i/aOpIUMo8mx8q/l';
     }
 

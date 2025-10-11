@@ -20,6 +20,13 @@ export async function createPayment(telegramId: number, amount: number): Promise
     const shopId = config.yookassa?.shopId;
     const secretKey = config.yookassa?.secretKey;
 
+    console.log('[ЮKassa] Config check:', {
+      hasShopId: !!shopId,
+      hasSecretKey: !!secretKey,
+      shopIdValue: shopId?.substring(0, 5) + '...',
+      secretKeyValue: secretKey?.substring(0, 5) + '...',
+    });
+
     if (!shopId || !secretKey) {
       console.error('[ЮKassa] Missing shopId or secretKey in config');
       throw new Error('ЮKassa credentials not configured');
@@ -35,15 +42,19 @@ export async function createPayment(telegramId: number, amount: number): Promise
       capture: true,
       confirmation: {
         type: 'redirect',
-        return_url: 'https://t.me/your_bot_name', // Замени на имя своего бота
+        return_url: 'https://t.me/DaEdaFoodBot', // Замени на имя своего бота если нужно
       },
-      description: 'Подписка ДаЕда на 30 дней',
+      description: 'Подписка ДаЕда на 30 дней (ТЕСТ)',
       metadata: {
         telegram_id: telegramId.toString(),
       },
     };
 
-    console.log('[ЮKassa] Creating payment for user', telegramId);
+    console.log('[ЮKassa] Creating payment:', {
+      user: telegramId,
+      amount: amount,
+      paymentData: JSON.stringify(paymentData)
+    });
 
     const response = await fetch('https://api.yookassa.ru/v3/payments', {
       method: 'POST',
@@ -55,19 +66,30 @@ export async function createPayment(telegramId: number, amount: number): Promise
       body: JSON.stringify(paymentData),
     });
 
+    console.log('[ЮKassa] Response status:', response.status, response.statusText);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[ЮKassa] API Error:', errorText);
-      throw new Error(`ЮKassa API error: ${response.status}`);
+      console.error('[ЮKassa] API Error Response:', errorText);
+      console.error('[ЮKassa] Response status:', response.status);
+      throw new Error(`ЮKassa API error: ${response.status} - ${errorText}`);
     }
 
     const result: CreatePaymentResponse = await response.json();
 
-    console.log('[ЮKassa] Payment created:', result.id);
+    console.log('[ЮKassa] Payment created successfully:', {
+      id: result.id,
+      status: result.status,
+      url: result.confirmation.confirmation_url.substring(0, 50) + '...'
+    });
 
     return result.confirmation.confirmation_url;
   } catch (error) {
     console.error('[ЮKassa] Error creating payment:', error);
+    if (error instanceof Error) {
+      console.error('[ЮKassa] Error message:', error.message);
+      console.error('[ЮKassa] Error stack:', error.stack);
+    }
     throw error;
   }
 }
