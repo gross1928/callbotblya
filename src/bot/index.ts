@@ -1056,6 +1056,35 @@ bot.catch((err: any, ctx: CustomContext) => {
 export { bot };
 
 // Start function
+/**
+ * Launch bot with retry logic for 409 conflicts (common during Railway deployments)
+ */
+async function launchBotWithRetry(maxRetries: number = 3, delayMs: number = 5000): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await bot.launch({
+        dropPendingUpdates: true, // Drop pending updates to avoid conflicts
+      });
+      console.log('✅ Bot started with polling');
+      return; // Success!
+    } catch (error: any) {
+      // Check if it's a 409 Conflict error
+      if (error?.response?.error_code === 409) {
+        if (attempt < maxRetries) {
+          console.log(`⚠️ 409 Conflict detected (attempt ${attempt}/${maxRetries}). Waiting ${delayMs}ms for old instance to stop...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+          continue;
+        } else {
+          console.error('❌ Max retries reached for 409 Conflict. Old bot instance may still be running.');
+          throw error;
+        }
+      }
+      // For other errors, throw immediately
+      throw error;
+    }
+  }
+}
+
 export async function startBot(): Promise<void> {
   try {
     validateConfig();
@@ -1089,11 +1118,8 @@ export async function startBot(): Promise<void> {
       console.error('⚠️ Failed to set bot commands:', error);
     }
     
-    // Use polling mode for Railway deployment
-    await bot.launch({
-      dropPendingUpdates: true, // Drop pending updates to avoid conflicts
-    });
-    console.log('Bot started with polling');
+    // Launch bot with retry logic for 409 conflicts
+    await launchBotWithRetry(3, 5000);
 
     // Start subscription checker (runs every 12 hours)
     startSubscriptionChecker();
