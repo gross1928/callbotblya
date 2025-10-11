@@ -750,12 +750,23 @@ export async function analyzeFoodIngredientsOnly(description: string, isPhotoAna
           content: prompt
         }
       ],
-      max_completion_tokens: 2000,
+      max_completion_tokens: 3000, // Increased for reasoning model
       response_format: { type: "json_object" }
     });
 
+    console.log('[analyzeFoodIngredientsOnly] Full response:', JSON.stringify(response));
+    console.log('[analyzeFoodIngredientsOnly] Choices:', response.choices);
+    console.log('[analyzeFoodIngredientsOnly] First choice:', response.choices[0]);
+    console.log('[analyzeFoodIngredientsOnly] Message:', response.choices[0]?.message);
+    console.log('[analyzeFoodIngredientsOnly] Finish reason:', response.choices[0]?.finish_reason);
+
     const content = response.choices[0]?.message?.content;
-    if (!content) {
+    console.log('[analyzeFoodIngredientsOnly] Content:', content);
+    console.log('[analyzeFoodIngredientsOnly] Content type:', typeof content);
+    console.log('[analyzeFoodIngredientsOnly] Content length:', content?.length);
+    
+    if (!content || content.trim().length === 0) {
+      console.error('[analyzeFoodIngredientsOnly] Empty content received from OpenAI');
       throw new Error('No response from OpenAI');
     }
 
@@ -770,6 +781,10 @@ export async function analyzeFoodIngredientsOnly(description: string, isPhotoAna
     return analysis;
   } catch (error) {
     console.error('[analyzeFoodIngredientsOnly] Error:', error);
+    if (error instanceof Error) {
+      console.error('[analyzeFoodIngredientsOnly] Error message:', error.message);
+      console.error('[analyzeFoodIngredientsOnly] Error stack:', error.stack);
+    }
     throw new Error('Не удалось распознать ингредиенты. Попробуй описать подробнее.');
   }
 }
