@@ -131,6 +131,20 @@ export async function analyzeFoodFromText(description: string): Promise<FoodAnal
   try {
     console.log('[analyzeFoodFromText] Input description:', description);
     
+    // Use products database if enabled
+    if (config.food.useProductsDatabase) {
+      console.log('[analyzeFoodFromText] Using products database for accurate nutrition');
+      try {
+        const ingredientAnalysis = await analyzeFoodIngredientsOnly(description, false);
+        const enrichedAnalysis = await enrichWithDatabaseNutrition(ingredientAnalysis);
+        console.log('[analyzeFoodFromText] Successfully used database:', enrichedAnalysis);
+        return enrichedAnalysis;
+      } catch (dbError) {
+        console.log('[analyzeFoodFromText] Database enrichment failed, falling back to AI:', dbError);
+        // Continue with AI-only analysis below
+      }
+    }
+    
     const response = await openai.chat.completions.create({
       model: config.openai.model,
       messages: [
