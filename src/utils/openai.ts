@@ -808,7 +808,10 @@ export async function enrichWithDatabaseNutrition(analysis: FoodIngredientAnalys
     // Search in database
     const products = await searchProduct(ingredient.product, 3);
     
-    if (products.length > 0 && products[0].similarity && products[0].similarity > 0.4) {
+    console.log(`[enrichWithDatabaseNutrition] Search results:`, products.map(p => ({ name: p.name, similarity: p.similarity })));
+    
+    // Lower threshold to 0.3 for better matching
+    if (products.length > 0 && products[0].similarity && products[0].similarity > 0.3) {
       // Found in database - use accurate data
       const bestMatch = products[0];
       console.log(`[enrichWithDatabaseNutrition] Found match: ${bestMatch.name} (similarity: ${bestMatch.similarity})`);
@@ -826,17 +829,40 @@ export async function enrichWithDatabaseNutrition(analysis: FoodIngredientAnalys
       console.log(`[enrichWithDatabaseNutrition] Added nutrition:`, nutrition);
     } else {
       // Not found - use AI estimation (fallback)
-      console.log(`[enrichWithDatabaseNutrition] Product not found in database: ${ingredient.product}, using AI estimation`);
+      console.log(`[enrichWithDatabaseNutrition] Product not found in database (similarity too low): ${ingredient.product}, using AI estimation`);
       
-      const aiEstimate = await estimateNutritionWithAI(ingredient.product, ingredient.weight);
-      
-      totalCalories += aiEstimate.calories;
-      totalProtein += aiEstimate.protein;
-      totalFat += aiEstimate.fat;
-      totalCarbs += aiEstimate.carbs;
-      totalWeight += ingredient.weight;
-      
-      recognizedIngredients.push(`${ingredient.product} ${ingredient.weight}г`);
+      try {
+        const aiEstimate = await estimateNutritionWithAI(ingredient.product, ingredient.weight);
+        
+        totalCalories += aiEstimate.calories;
+        totalProtein += aiEstimate.protein;
+        totalFat += aiEstimate.fat;
+        totalCarbs += aiEstimate.carbs;
+        totalWeight += ingredient.weight;
+        
+        recognizedIngredients.push(`${ingredient.product} ${ingredient.weight}г`);
+        
+        console.log(`[enrichWithDatabaseNutrition] Used AI estimation:`, aiEstimate);
+      } catch (aiError) {
+        console.error(`[enrichWithDatabaseNutrition] AI estimation failed for ${ingredient.product}, using conservative defaults`);
+        // Use very conservative defaults if AI fails
+        const conservativeEstimate = {
+          calories: ingredient.weight * 1.5,
+          protein: ingredient.weight * 0.05,
+          fat: ingredient.weight * 0.03,
+          carbs: ingredient.weight * 0.25
+        };
+        
+        totalCalories += conservativeEstimate.calories;
+        totalProtein += conservativeEstimate.protein;
+        totalFat += conservativeEstimate.fat;
+        totalCarbs += conservativeEstimate.carbs;
+        totalWeight += ingredient.weight;
+        
+        recognizedIngredients.push(`${ingredient.product} ${ingredient.weight}г`);
+        
+        console.log(`[enrichWithDatabaseNutrition] Used conservative estimate:`, conservativeEstimate);
+      }
     }
   }
   
