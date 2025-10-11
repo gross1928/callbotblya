@@ -1,5 +1,7 @@
 import { Context } from 'telegraf';
 import type { CustomContext } from '../types';
+import { createPayment } from '../utils/yookassa';
+import { config } from '../config';
 
 /**
  * Show subscription page
@@ -132,28 +134,103 @@ ${(subscription_status === 'trial' && daysRemaining <= 0) || subscription_status
 }
 
 /**
- * Handle buy subscription button (placeholder for now)
+ * Handle buy subscription button
  */
 export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
   try {
     await ctx.answerCbQuery();
     
-    const message = `
+    if (!ctx.from?.id) {
+      await ctx.reply('❌ Ошибка: не удалось определить пользователя');
+      return;
+    }
+
+    const telegramId = ctx.from.id;
+    let paymentUrl: string;
+    let useApiMode = false;
+
+    // Try to create payment via ЮKassa API if credentials are configured
+    if (config.yookassa?.shopId && config.yookassa?.secretKey) {
+      try {
+        console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId);
+        paymentUrl = await createPayment(telegramId, 199);
+        useApiMode = true;
+        console.log('[Subscription] Payment created successfully');
+      } catch (error) {
+        console.error('[Subscription] Failed to create payment via API, using fallback:', error);
+        paymentUrl = config.yookassa.fallbackPaymentUrl;
+      }
+    } else {
+      console.log('[Subscription] ЮKassa API not configured, using fallback link');
+      paymentUrl = config.yookassa?.fallbackPaymentUrl || 'https://yookassa.ru/my/i/aOpIUMo8mx8q/l';
+    }
+
+    // API mode - automatic activation
+    if (useApiMode) {
+      const message = `
 💳 <b>Оформление подписки</b>
 
-Для оформления подписки на бота "ДаЕда" перейдите по ссылке ниже:
+Нажмите кнопку ниже для оплаты подписки на бота "ДаЕда".
 
-[Ссылка на оплату будет добавлена позже]
-
-После оплаты подписка активируется автоматически в течение нескольких минут.
+⚡️ После оплаты подписка активируется <b>автоматически</b> в течение нескольких минут!
 
 💰 <b>Стоимость:</b> 199₽/месяц
 ⏰ <b>Период:</b> 30 дней
 
-Есть вопросы? Напиши @grossvn
-    `.trim();
+<b>🎯 Что вы получите:</b>
+• 🍎 Безлимитный анализ еды (фото + текст)
+• 📊 Детальная статистика питания
+• 🤖 AI-коуч с персональными советами
+• 🧪 Анализ медицинских данных
+• 💧 Трекинг воды
+• 📦 Пользовательские продукты
 
-    await ctx.reply(message, { parse_mode: 'HTML' });
+Есть вопросы? Напиши @grossvn
+      `.trim();
+
+      const keyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '💳 Оплатить 199₽', url: paymentUrl }],
+            [{ text: '🔙 Назад', callback_data: 'subscription' }],
+          ],
+        },
+      };
+
+      await ctx.reply(message, { parse_mode: 'HTML', ...keyboard });
+    } 
+    // Fallback mode - manual activation required
+    else {
+      const message = `
+💳 <b>Оформление подписки</b>
+
+Для оплаты подписки на бота "ДаЕда":
+
+1️⃣ Нажмите на кнопку "Оплатить" ниже
+2️⃣ Введите сумму: <b>199₽</b>
+3️⃣ В комментарии к платежу обязательно укажите: <code>${telegramId}</code>
+4️⃣ Завершите оплату
+5️⃣ Напишите @grossvn с подтверждением оплаты
+
+💰 <b>Стоимость:</b> 199₽/месяц
+⏰ <b>Период:</b> 30 дней
+
+<b>⚠️ ВАЖНО!</b> Обязательно укажите ваш ID <code>${telegramId}</code> в комментарии к платежу и напишите админу для активации.
+
+Есть вопросы? Напиши @grossvn
+      `.trim();
+
+      const keyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '💳 Оплатить 199₽', url: paymentUrl }],
+            [{ text: '🔙 Назад', callback_data: 'subscription' }],
+          ],
+        },
+      };
+
+      await ctx.reply(message, { parse_mode: 'HTML', ...keyboard });
+    }
 
   } catch (error) {
     console.error('Error handling buy subscription:', error);

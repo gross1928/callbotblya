@@ -49,6 +49,13 @@ export const config = {
   food: {
     useProductsDatabase: process.env.USE_PRODUCTS_DATABASE === 'true', // Enable accurate nutrition from database
   },
+
+  // ЮKassa payment settings
+  yookassa: {
+    shopId: process.env.YOOKASSA_SHOP_ID,
+    secretKey: process.env.YOOKASSA_SECRET_KEY,
+    fallbackPaymentUrl: process.env.YOOKASSA_FALLBACK_URL || 'https://yookassa.ru/my/i/aOpIUMo8mx8q/l',
+  },
 } as const;
 
 // Validation
