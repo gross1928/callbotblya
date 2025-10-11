@@ -61,7 +61,7 @@ async function analyzeFoodPhotoIngredientsOnly(imageUrl: string): Promise<FoodIn
           ]
         }
       ],
-      max_completion_tokens: 3000,
+      max_completion_tokens: 12000, // Increased for reasoning model (gpt-5-nano)
     });
 
     const content = response.choices[0]?.message?.content;
@@ -750,7 +750,7 @@ export async function analyzeFoodIngredientsOnly(description: string, isPhotoAna
           content: prompt
         }
       ],
-      max_completion_tokens: 3000, // Increased for reasoning model
+      max_completion_tokens: 12000, // Increased for reasoning model (gpt-5-nano)
       response_format: { type: "json_object" }
     });
 
@@ -935,95 +935,4 @@ async function estimateNutritionWithAI(product: string, weight: number): Promise
       carbs: weight * 0.25
     };
   }
-}
-
-/**
- * Analyze food from photo using database (NEW METHOD)
- */
-export async function analyzeFoodFromPhotoWithDB(imageUrl: string): Promise<FoodAnalysis> {
-  try {
-    // Step 1: AI recognizes ingredients and weights
-    const ingredientsAnalysis = await analyzeFoodIngredientsFromPhoto(imageUrl);
-    
-    // Step 2: Database provides accurate nutrition
-    return await enrichWithDatabaseNutrition(ingredientsAnalysis);
-  } catch (error) {
-    console.error('[analyzeFoodFromPhotoWithDB] Error:', error);
-    // Fallback to old method
-    return await analyzeFoodFromPhoto(imageUrl);
-  }
-}
-
-/**
- * Analyze food from text using database (NEW METHOD)
- */
-export async function analyzeFoodFromTextWithDB(description: string): Promise<FoodAnalysis> {
-  try {
-    // Step 1: AI recognizes ingredients and weights
-    const ingredientsAnalysis = await analyzeFoodIngredientsOnly(description, false);
-    
-    // Step 2: Database provides accurate nutrition
-    return await enrichWithDatabaseNutrition(ingredientsAnalysis);
-  } catch (error) {
-    console.error('[analyzeFoodFromTextWithDB] Error:', error);
-    // Fallback to old method
-    return await analyzeFoodFromText(description);
-  }
-}
-
-/**
- * Analyze ingredients from photo
- */
-async function analyzeFoodIngredientsFromPhoto(imageUrl: string): Promise<FoodIngredientAnalysis> {
-  const response = await openai.chat.completions.create({
-    model: config.openai.visionModel,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Проанализируй фото еды и определи:
-1. Название блюда
-2. Список всех ингредиентов с их примерным весом в граммах
-
-ВАЖНО:
-- Определяй ВСЕ видимые ингредиенты
-- Вес укажи для каждого ингредиента отдельно
-- Если видна корочка/блеск от масла - укажи масло (5-10г)
-- Будь реалистичен с весом
-
-Ответь ТОЛЬКО в формате JSON:
-{
-  "dish_name": "название блюда",
-  "ingredients": [
-    {"product": "название продукта", "weight": вес_в_граммах}
-  ]
-}`
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: imageUrl,
-              detail: 'high'
-            }
-          }
-        ]
-      }
-    ],
-    max_completion_tokens: 2000
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    throw new Error('No response from Vision API');
-  }
-
-  // Extract JSON from response
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error('Invalid response format');
-  }
-
-  return JSON.parse(jsonMatch[0]);
 }

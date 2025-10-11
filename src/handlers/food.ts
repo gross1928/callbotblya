@@ -1,10 +1,9 @@
 import { Context } from 'telegraf';
-import { analyzeFoodFromPhoto, analyzeFoodFromText, analyzeFoodFromPhotoWithDB, analyzeFoodFromTextWithDB } from '../utils/openai';
+import { analyzeFoodFromPhoto, analyzeFoodFromText } from '../utils/openai';
 import { addFoodEntry, saveUserSession, getUserSession, clearUserSession } from '../database/queries';
 import { formatCalories, formatMacros } from '../utils/calculations';
 import { updateDashboardMessage } from './dashboard';
 import type { CustomContext, FoodAnalysis, MealType } from '../types';
-import { config } from '../config';
 
 /**
  * Handle food photo analysis
@@ -25,14 +24,10 @@ export async function handleFoodPhotoAnalysis(ctx: CustomContext): Promise<void>
 
     await ctx.reply('🔍 Анализирую фото еды...');
 
-    // Analyze food using OpenAI Vision API
-    // Use database method if enabled for accurate nutrition
-    const analysis = config.food.useProductsDatabase
-      ? await analyzeFoodFromPhotoWithDB(fileUrl)
-      : await analyzeFoodFromPhoto(fileUrl);
+    // Analyze food using OpenAI Vision API with database integration
+    const analysis = await analyzeFoodFromPhoto(fileUrl);
     
     console.log(`[handleFoodPhotoAnalysis] Analysis completed:`, analysis);
-    console.log(`[handleFoodPhotoAnalysis] Used database:`, config.food.useProductsDatabase);
     
     // Show analysis results
     await showFoodAnalysis(ctx, analysis);
@@ -55,14 +50,10 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
 
     await ctx.reply('🔍 Анализирую описание еды...');
 
-    // Analyze food using OpenAI text API
-    // Use database method if enabled for accurate nutrition
-    const analysis = config.food.useProductsDatabase
-      ? await analyzeFoodFromTextWithDB(text)
-      : await analyzeFoodFromText(text);
+    // Analyze food using OpenAI text API with database integration
+    const analysis = await analyzeFoodFromText(text);
     
     console.log(`[handleFoodTextAnalysis] Analysis completed:`, analysis);
-    console.log(`[handleFoodTextAnalysis] Used database:`, config.food.useProductsDatabase);
     
     // Show analysis results
     await showFoodAnalysis(ctx, analysis);
@@ -418,14 +409,10 @@ export async function handleFoodEditText(ctx: CustomContext, text: string, analy
       console.log(`[handleFoodEditText] Detected addition. Original: ${originalDescription}, Updated: ${updatedDescription}`);
     }
     
-    // Re-analyze with updated description
-    // Use database method if enabled for accurate nutrition
-    const updatedAnalysis = config.food.useProductsDatabase
-      ? await analyzeFoodFromTextWithDB(updatedDescription)
-      : await analyzeFoodFromText(updatedDescription);
+    // Re-analyze with updated description using database integration
+    const updatedAnalysis = await analyzeFoodFromText(updatedDescription);
     
     console.log(`[handleFoodEditText] Updated analysis:`, updatedAnalysis);
-    console.log(`[handleFoodEditText] Used database:`, config.food.useProductsDatabase);
     
     // Show updated analysis with same flow as original
     await showFoodAnalysis(ctx, updatedAnalysis);
