@@ -8,6 +8,10 @@ const openai = new OpenAI({
   apiKey: config.openai.apiKey,
 });
 
+// Log database config status
+console.log('[CONFIG] USE_PRODUCTS_DATABASE env:', process.env.USE_PRODUCTS_DATABASE);
+console.log('[CONFIG] config.food.useProductsDatabase:', config.food.useProductsDatabase);
+
 /**
  * Analyze food photo and recognize only ingredients and weights (without calculating nutrition)
  * AI just identifies products, database provides accurate nutrition
