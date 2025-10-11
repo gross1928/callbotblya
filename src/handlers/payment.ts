@@ -46,12 +46,14 @@ export async function handleYooKassaWebhook(notification: YooKassaNotification):
     const telegramIdNumber = parseInt(telegramId);
     console.log(`[Payment Handler] Processing payment for user ${telegramIdNumber}`);
 
-    // Check payment amount (should be 199 RUB)
+    // Check payment amount (TEST: accepting any amount >= 1 RUB)
     const amount = parseFloat(notification.object.amount.value);
-    if (amount < 199) {
+    if (amount < 1) {
       console.error(`[Payment Handler] Invalid payment amount: ${amount} RUB`);
       return;
     }
+    
+    console.log(`[Payment Handler] Payment amount: ${amount} RUB`);
 
     // Activate subscription for 30 days
     const subscriptionEndDate = new Date();

@@ -153,7 +153,7 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
     if (config.yookassa?.shopId && config.yookassa?.secretKey) {
       try {
         console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId);
-        paymentUrl = await createPayment(telegramId, 199);
+        paymentUrl = await createPayment(telegramId, 1); // TEST: 1₽ for testing
         useApiMode = true;
         console.log('[Subscription] Payment created successfully');
       } catch (error) {
@@ -168,13 +168,13 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
     // API mode - automatic activation
     if (useApiMode) {
       const message = `
-💳 <b>Оформление подписки</b>
+💳 <b>Оформление подписки (ТЕСТ)</b>
 
 Нажмите кнопку ниже для оплаты подписки на бота "ДаЕда".
 
 ⚡️ После оплаты подписка активируется <b>автоматически</b> в течение нескольких минут!
 
-💰 <b>Стоимость:</b> 199₽/месяц
+💰 <b>Стоимость:</b> 1₽ (тестовая цена)
 ⏰ <b>Период:</b> 30 дней
 
 <b>🎯 Что вы получите:</b>
@@ -191,7 +191,7 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
       const keyboard = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '💳 Оплатить 199₽', url: paymentUrl }],
+            [{ text: '💳 Оплатить 1₽ (ТЕСТ)', url: paymentUrl }],
             [{ text: '🔙 Назад', callback_data: 'subscription' }],
           ],
         },
