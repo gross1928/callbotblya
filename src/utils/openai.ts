@@ -9,10 +9,108 @@ const openai = new OpenAI({
 });
 
 /**
+ * Analyze food photo and recognize only ingredients and weights (without calculating nutrition)
+ * AI just identifies products, database provides accurate nutrition
+ */
+async function analyzeFoodPhotoIngredientsOnly(imageUrl: string): Promise<FoodIngredientAnalysis> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: config.openai.visionModel,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Проанализируй фото еды и определи:
+1. Название блюда
+2. Список всех ингредиентов с их примерным весом в граммах
+
+ВАЖНО:
+- Определяй ВСЕ видимые ингредиенты (основные продукты)
+- Вес укажи для каждого ингредиента отдельно
+- Если жареное (есть корочка, блестит от масла) - укажи масло (5-10г)
+- Для салатов - укажи каждый овощ отдельно
+- Для сложных блюд - разбей на основные компоненты
+- Будь реалистичен с весом
+
+ПРИМЕРЫ:
+- "Куриная грудка с рисом" → [{"product": "куриная грудка", "weight": 200}, {"product": "рис белый вареный", "weight": 150}]
+- "Яичница" → [{"product": "яйцо куриное", "weight": 100}, {"product": "масло подсолнечное", "weight": 10}]
+
+Ответь ТОЛЬКО в формате JSON:
+{
+  "dish_name": "название блюда",
+  "ingredients": [
+    {"product": "название продукта", "weight": вес_в_граммах},
+    {"product": "название продукта 2", "weight": вес_в_граммах}
+  ]
+}`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageUrl,
+                detail: 'high'
+              }
+            }
+          ]
+        }
+      ],
+      max_completion_tokens: 3000,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('[analyzeFoodPhotoIngredientsOnly] OpenAI response:', content);
+
+    // Extract JSON
+    let jsonContent = content.trim();
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+
+    const analysis: FoodIngredientAnalysis = JSON.parse(jsonContent);
+    
+    if (!analysis.ingredients || analysis.ingredients.length === 0) {
+      throw new Error('Не удалось определить ингредиенты');
+    }
+
+    return analysis;
+  } catch (error) {
+    console.error('[analyzeFoodPhotoIngredientsOnly] Error:', error);
+    throw new Error('Не удалось распознать ингредиенты на фото.');
+  }
+}
+
+/**
  * Analyze food from photo using Vision API
+ * With products database integration for accurate nutrition
  */
 export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalysis> {
   try {
+    console.log('[analyzeFoodFromPhoto] Starting photo analysis, imageUrl:', imageUrl.substring(0, 50) + '...');
+    
+    // Use products database if enabled
+    if (config.food.useProductsDatabase) {
+      console.log('[analyzeFoodFromPhoto] Using products database for accurate nutrition');
+      try {
+        const ingredientAnalysis = await analyzeFoodPhotoIngredientsOnly(imageUrl);
+        const enrichedAnalysis = await enrichWithDatabaseNutrition(ingredientAnalysis);
+        console.log('[analyzeFoodFromPhoto] Successfully used database:', enrichedAnalysis);
+        return enrichedAnalysis;
+      } catch (dbError) {
+        console.log('[analyzeFoodFromPhoto] Database enrichment failed, falling back to AI:', dbError);
+        // Continue with AI-only analysis below
+      }
+    }
+    
+    // Fallback: AI-only analysis (old method)
+    console.log('[analyzeFoodFromPhoto] Using AI-only analysis');
     const response = await openai.chat.completions.create({
       model: config.openai.visionModel,
       messages: [
@@ -69,8 +167,7 @@ export async function analyzeFoodFromPhoto(imageUrl: string): Promise<FoodAnalys
           ]
         }
       ],
-      max_completion_tokens: 12000, // Increased significantly for reasoning model (gpt-5-nano) - needs space for reasoning + JSON response
-      // temperature не указывается - gpt-5-nano использует только дефолтное значение 1
+      max_completion_tokens: 12000,
     });
 
     console.log('[analyzeFoodFromPhoto] Finish reason:', response.choices[0]?.finish_reason);
