@@ -15,7 +15,7 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'ДаЕда Telegram Bot is running!',
+    message: 'ЗаЕдаю Telegram Bot is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });

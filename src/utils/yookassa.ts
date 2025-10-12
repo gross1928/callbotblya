@@ -42,9 +42,9 @@ export async function createPayment(telegramId: number, amount: number): Promise
       capture: true,
       confirmation: {
         type: 'redirect',
-        return_url: 'https://t.me/DaEdaFoodBot', // Замени на имя своего бота если нужно
+        return_url: 'https://t.me/calorirobot', // Замени на имя своего бота если нужно
       },
-      description: 'Подписка ДаЕда на 30 дней',
+      description: 'Подписка ЗаЕдаю на 30 дней',
       metadata: {
         telegram_id: telegramId.toString(),
       },

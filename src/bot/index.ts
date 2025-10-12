@@ -107,7 +107,7 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
 bot.start(async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
     await ctx.reply(
-      '🍎 Добро пожаловать в бота "ДаЕда"!\n\n' +
+      '🍎 Добро пожаловать в бота "ЗаЕдаю"!\n\n' +
       'Я помогу тебе отслеживать питание, калории, воду и медицинские данные.\n\n' +
       'Для начала нужно создать профиль. Нажми /profile чтобы начать регистрацию.'
     );
@@ -229,7 +229,7 @@ bot.command('subscription', async (ctx: CustomContext) => {
 // Help command
 bot.help(async (ctx: CustomContext) => {
   const helpText = `
-🍎 <b>ДаЕда - Помощник по питанию</b>
+🍎 <b>ЗаЕдаю - Помощник по питанию</b>
 
 <b>Как пользоваться:</b>
 1. Нажми <b>Главное меню</b> (кнопка ниже) или /start
@@ -1059,7 +1059,7 @@ export { bot };
 export async function startBot(): Promise<void> {
   try {
     validateConfig();
-    console.log('🤖 Запуск бота "ДаЕда"...');
+    console.log('🤖 Запуск бота "ЗаЕдаю"...');
     
     // Stop any existing webhook and use polling
     await bot.telegram.deleteWebhook();
