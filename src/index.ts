@@ -24,11 +24,18 @@ app.get('/', (req, res) => {
 // ЮKassa webhook endpoint for payment notifications
 app.post('/webhook/yookassa', async (req, res) => {
   try {
-    console.log('[ЮKassa Webhook] Received notification:', JSON.stringify(req.body));
+    console.log('[ЮKassa Webhook] ===== RECEIVED NOTIFICATION =====');
+    console.log('[ЮKassa Webhook] Headers:', JSON.stringify(req.headers));
+    console.log('[ЮKassa Webhook] Body:', JSON.stringify(req.body, null, 2));
+    console.log('[ЮKassa Webhook] Timestamp:', new Date().toISOString());
+    
     await handleYooKassaWebhook(req.body);
+    
+    console.log('[ЮKassa Webhook] ===== PROCESSING COMPLETED =====');
     res.status(200).send('OK');
   } catch (error) {
-    console.error('[ЮKassa Webhook] Error processing webhook:', error);
+    console.error('[ЮKassa Webhook] ===== ERROR PROCESSING WEBHOOK =====');
+    console.error('[ЮKassa Webhook] Error:', error);
     res.status(500).send('Error');
   }
 });
