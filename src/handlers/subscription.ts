@@ -93,7 +93,7 @@ ${statusText}
 
 ━━━━━━━━━━━━━━━━━━━━
 
-💰 <b>Стоимость:</b> 1₽ (ТЕСТ) / обычно 199₽/месяц
+💰 <b>Стоимость:</b> 199₽/месяц
 
 ${(subscription_status === 'trial' && daysRemaining <= 0) || subscription_status === 'expired' ? 
   '\n🎁 <b>Первые 3 дня бесплатно уже использованы</b>' : 
@@ -159,8 +159,8 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
 
     if (config.yookassa?.shopId && config.yookassa?.secretKey) {
       try {
-        console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId, 'amount: 1₽');
-        paymentUrl = await createPayment(telegramId, 1); // TEST: 1₽ for testing
+        console.log('[Subscription] Creating payment via ЮKassa API for user', telegramId, 'amount: 199₽');
+        paymentUrl = await createPayment(telegramId, 199);
         useApiMode = true;
         console.log('[Subscription] Payment created successfully, URL:', paymentUrl.substring(0, 50) + '...');
       } catch (error) {
@@ -177,13 +177,13 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
     // API mode - automatic activation
     if (useApiMode) {
       const message = `
-💳 <b>Оформление подписки (ТЕСТ)</b>
+💳 <b>Оформление подписки</b>
 
 Нажмите кнопку ниже для оплаты подписки на бота "ДаЕда".
 
 ⚡️ После оплаты подписка активируется <b>автоматически</b> в течение нескольких минут!
 
-💰 <b>Стоимость:</b> 1₽ (тестовая цена)
+💰 <b>Стоимость:</b> 199₽/месяц
 ⏰ <b>Период:</b> 30 дней
 
 <b>🎯 Что вы получите:</b>
@@ -200,7 +200,7 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
       const keyboard = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '💳 Оплатить 1₽ (ТЕСТ)', url: paymentUrl }],
+            [{ text: '💳 Оплатить 199₽', url: paymentUrl }],
             [{ text: '🔙 Назад', callback_data: 'subscription' }],
           ],
         },
@@ -216,12 +216,12 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
 Для оплаты подписки на бота "ДаЕда":
 
 1️⃣ Нажмите на кнопку "Оплатить" ниже
-2️⃣ Введите сумму: <b>1₽</b> (ТЕСТ)
+2️⃣ Введите сумму: <b>199₽</b>
 3️⃣ В комментарии к платежу обязательно укажите: <code>${telegramId}</code>
 4️⃣ Завершите оплату
 5️⃣ Напишите @grossvn с подтверждением оплаты
 
-💰 <b>Стоимость:</b> 1₽ (тестовая цена)
+💰 <b>Стоимость:</b> 199₽/месяц
 ⏰ <b>Период:</b> 30 дней
 
 <b>⚠️ ВАЖНО!</b> Обязательно укажите ваш ID <code>${telegramId}</code> в комментарии к платежу и напишите админу для активации.
@@ -232,7 +232,7 @@ export async function handleBuySubscription(ctx: CustomContext): Promise<void> {
       const keyboard = {
         reply_markup: {
           inline_keyboard: [
-            [{ text: '💳 Оплатить 1₽ (ТЕСТ)', url: paymentUrl }],
+            [{ text: '💳 Оплатить 199₽', url: paymentUrl }],
             [{ text: '🔙 Назад', callback_data: 'subscription' }],
           ],
         },
@@ -293,7 +293,7 @@ export async function showSubscriptionRequired(ctx: CustomContext): Promise<void
 • 🧪 Анализ медицинских данных
 • И многое другое!
 
-💰 <b>Всего 1₽ (ТЕСТ)</b>
+💰 <b>Всего 199₽/месяц</b>
 
 Нажмите кнопку ниже, чтобы оформить подписку.
     `.trim();

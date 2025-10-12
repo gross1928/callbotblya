@@ -44,7 +44,7 @@ export async function createPayment(telegramId: number, amount: number): Promise
         type: 'redirect',
         return_url: 'https://t.me/DaEdaFoodBot', // Замени на имя своего бота если нужно
       },
-      description: 'Подписка ДаЕда на 30 дней (ТЕСТ)',
+      description: 'Подписка ДаЕда на 30 дней',
       metadata: {
         telegram_id: telegramId.toString(),
       },
