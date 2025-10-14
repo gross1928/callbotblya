@@ -11,18 +11,26 @@
     "import-products": "ts-node scripts/import-products.ts",
     "import-json": "ts-node scripts/import-from-json.ts"
   },
-  "keywords": ["telegram", "bot", "food", "tracking", "nutrition"],
+  "keywords": [
+    "telegram",
+    "bot",
+    "food",
+    "tracking",
+    "nutrition"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@sentry/node": "^10.19.0",
+    "@sentry/profiling-node": "^10.19.0",
     "@supabase/supabase-js": "^2.38.4",
+    "axios": "^1.6.2",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "openai": "^4.20.1",
     "pg": "^8.11.3",
-    "telegraf": "^4.15.4",
     "sharp": "^0.32.6",
-    "axios": "^1.6.2"
+    "telegraf": "^4.15.4"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

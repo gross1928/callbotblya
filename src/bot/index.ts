@@ -22,6 +22,7 @@ import { showSubscriptionPage, handleBuySubscription, hasActiveAccess, showSubsc
 import { startSubscriptionChecker } from '../utils/subscription-checker';
 import { checkRateLimit, startRateLimiterCleanup, logRateLimiterStats } from '../utils/rate-limiter';
 import { editOrReply } from '../utils/telegram';
+import { captureException, setUserContext, addBreadcrumb } from '../utils/sentry';
 import type { BotContext } from '../types';
 
 // Extend Telegraf context with our custom properties
@@ -56,6 +57,11 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     const user = await getUserByTelegramId(telegramId);
     ctx.user = user || undefined;
     ctx.isNewUser = !user;
+    
+    // Set user context for Sentry
+    if (user) {
+      setUserContext(user.telegram_id.toString(), user.name);
+    }
     
     // Load session state from database
     const session = await getUserSession(telegramId);
@@ -96,6 +102,13 @@ bot.use(async (ctx: CustomContext, next: () => Promise<void>) => {
     console.log(`[Middleware] ctx.foodAnalyses size:`, ctx.foodAnalyses.size);
   } catch (error) {
     console.error('Error loading user and session:', error);
+    
+    // Report to Sentry
+    captureException(error as Error, {
+      telegramId,
+      context: 'middleware_user_session_load',
+    });
+    
     ctx.currentStep = undefined;
     ctx.tempData = {};
   }
@@ -1109,9 +1122,44 @@ export async function startBot(): Promise<void> {
     console.log('✅ Бот успешно запущен!');
   } catch (error) {
     console.error('❌ Ошибка запуска бота:', error);
+    
+    // Report to Sentry
+    captureException(error as Error, {
+      context: 'bot_start',
+    });
+    
     process.exit(1);
   }
 }
+
+// Global error handler for bot
+bot.catch((err: any, ctx: CustomContext) => {
+  console.error('❌ Ошибка в обработчике бота:', err);
+  
+  // Add breadcrumb for the action that caused the error
+  addBreadcrumb(
+    `Error in bot handler`,
+    'error',
+    {
+      update_type: ctx.updateType,
+      user_id: ctx.from?.id,
+      chat_id: ctx.chat?.id,
+    }
+  );
+  
+  // Report to Sentry with context
+  captureException(err instanceof Error ? err : new Error(String(err)), {
+    update: ctx.update,
+    user: ctx.user,
+    currentStep: ctx.currentStep,
+  });
+  
+  // Inform user about the error
+  ctx.reply('❌ Произошла ошибка. Наша команда уже получила уведомление и работает над исправлением.')
+    .catch(() => {
+      console.error('Failed to send error message to user');
+    });
+});
 
 // Graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));
