@@ -414,12 +414,13 @@ export async function handleFoodEditText(ctx: CustomContext, text: string, analy
     
     console.log(`[handleFoodEditText] Updated analysis:`, updatedAnalysis);
     
-    // Show updated analysis with same flow as original
-    await showFoodAnalysis(ctx, updatedAnalysis);
-    
-    // Clear editing session
+    // Clear old editing session BEFORE showing new analysis
     await clearUserSession(ctx.from!.id);
     ctx.currentStep = undefined;
+    
+    // Show updated analysis with same flow as original
+    // This will create a new session with the new analysis
+    await showFoodAnalysis(ctx, updatedAnalysis);
     
   } catch (error) {
     console.error('[handleFoodEditText] Error:', error);
