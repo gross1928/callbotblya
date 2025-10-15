@@ -12,7 +12,6 @@ export async function showMedicalMenu(ctx: CustomContext): Promise<void> {
     reply_markup: {
       inline_keyboard: [
         [{ text: '📄 Загрузить анализы', callback_data: 'upload_medical' }],
-        [{ text: '📊 Просмотр данных', callback_data: 'view_medical' }],
         [{ text: '📋 История анализов', callback_data: 'medical_history' }],
         [{ text: '🔙 Главное меню', callback_data: 'main_menu' }],
       ],
@@ -174,8 +173,8 @@ ${analysis.recommendations}
       reply_markup: {
         inline_keyboard: [
           [
-            { text: '📊 Все анализы', callback_data: 'view_medical' },
             { text: '📄 Загрузить еще', callback_data: 'upload_medical' },
+            { text: '📋 История', callback_data: 'medical_history' },
           ],
           [
             { text: '🤖 AI-коуч', callback_data: 'ai_coach' },
@@ -233,7 +232,6 @@ export async function showMedicalHistory(ctx: CustomContext): Promise<void> {
         inline_keyboard: [
           [
             { text: '📄 Загрузить новые', callback_data: 'upload_medical' },
-            { text: '📊 Просмотр данных', callback_data: 'view_medical' },
           ],
           [
             { text: '🔙 Главное меню', callback_data: 'main_menu' },

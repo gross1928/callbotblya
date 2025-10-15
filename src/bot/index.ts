@@ -270,6 +270,25 @@ bot.help(async (ctx: CustomContext) => {
   await ctx.replyWithHTML(helpText);
 });
 
+// Test error command (for testing error notifications)
+bot.command('test_error', async (ctx: CustomContext) => {
+  await ctx.reply('⚠️ Создаю тестовую ошибку для проверки уведомлений...');
+  
+  // Намеренно создаем ошибку
+  const testError = new Error('Тестовая ошибка для проверки системы уведомлений');
+  
+  // Отправляем в систему уведомлений
+  const { captureException } = await import('./utils/sentry');
+  captureException(testError, {
+    user: ctx.user,
+    context: 'test_error_command',
+    telegramId: ctx.from?.id,
+    test: true,
+  });
+  
+  await ctx.reply('✅ Тестовая ошибка отправлена! Проверь бота для уведомлений об ошибках.');
+});
+
 // Handle photo uploads for food analysis
 bot.on('photo', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
@@ -1022,11 +1041,6 @@ async function handleCallbackQuery(ctx: CustomContext, data: string) {
       break;
     case 'upload_medical':
       await handleMedicalDocumentUpload(ctx);
-      break;
-    case 'view_medical':
-      await clearUserSession(ctx.from!.id);
-      ctx.currentStep = undefined;
-      await showMedicalData(ctx);
       break;
     case 'medical_history':
       await clearUserSession(ctx.from!.id);
