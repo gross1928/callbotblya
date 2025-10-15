@@ -50,6 +50,11 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
 
     await ctx.reply('🔍 Анализирую описание еды...');
 
+    // ТЕСТОВАЯ ОШИБКА: обращение к несуществующей переменной
+    // @ts-ignore
+    const brokenVariable = nonExistentVariable.someProperty;
+    console.log(brokenVariable);
+
     // Analyze food using OpenAI text API with database integration
     const analysis = await analyzeFoodFromText(text);
     
@@ -60,6 +65,16 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
 
   } catch (error) {
     console.error('Error analyzing food text:', error);
+    
+    // Отправляем ошибку в систему уведомлений
+    const { captureException } = await import('../utils/sentry');
+    captureException(error as Error, {
+      user: ctx.user,
+      context: 'food_text_analysis',
+      telegramId: ctx.from?.id,
+      text: text,
+    });
+    
     await ctx.reply('❌ Не удалось проанализировать описание. Попробуй быть более конкретным.');
   }
 }
