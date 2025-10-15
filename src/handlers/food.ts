@@ -50,11 +50,6 @@ export async function handleFoodTextAnalysis(ctx: CustomContext, text: string): 
 
     await ctx.reply('🔍 Анализирую описание еды...');
 
-    // ТЕСТОВАЯ ОШИБКА: обращение к несуществующей переменной
-    // @ts-ignore
-    const brokenVariable = nonExistentVariable.someProperty;
-    console.log(brokenVariable);
-
     // Analyze food using OpenAI text API with database integration
     const analysis = await analyzeFoodFromText(text);
     

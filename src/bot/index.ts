@@ -270,29 +270,6 @@ bot.help(async (ctx: CustomContext) => {
   await ctx.replyWithHTML(helpText);
 });
 
-// Test error command (for testing error notifications)
-bot.command('test_error', async (ctx: CustomContext) => {
-  await ctx.reply('⚠️ Создаю тестовую ошибку для проверки уведомлений...');
-  
-  // Намеренно создаем ошибку
-  const testError = new Error('🧪 ТЕСТОВАЯ ОШИБКА для проверки системы уведомлений');
-  
-  // Логируем в консоль Railway
-  console.error('❌ [TEST ERROR]', testError);
-  console.error('❌ [TEST ERROR] Stack:', testError.stack);
-  
-  // Отправляем в систему уведомлений
-  const { captureException } = await import('../utils/sentry');
-  captureException(testError, {
-    user: ctx.user,
-    context: 'test_error_command',
-    telegramId: ctx.from?.id,
-    test: true,
-  });
-  
-  await ctx.reply('✅ Тестовая ошибка отправлена!\n\n✅ Уведомление пришло в бота\n✅ Ошибка записана в логи Railway');
-});
-
 // Handle photo uploads for food analysis
 bot.on('photo', async (ctx: CustomContext) => {
   if (ctx.isNewUser) {
