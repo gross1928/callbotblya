@@ -278,7 +278,7 @@ bot.command('test_error', async (ctx: CustomContext) => {
   const testError = new Error('Тестовая ошибка для проверки системы уведомлений');
   
   // Отправляем в систему уведомлений
-  const { captureException } = await import('./utils/sentry');
+  const { captureException } = await import('../utils/sentry');
   captureException(testError, {
     user: ctx.user,
     context: 'test_error_command',
