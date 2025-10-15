@@ -271,17 +271,37 @@ export async function showMedicalData(ctx: CustomContext): Promise<void> {
     const latestEntry = medicalData[0];
     const date = new Date(latestEntry.date).toLocaleDateString('ru-RU');
 
-    const dataText = `
+    // Limit text length to avoid Telegram's 4096 character limit
+    const maxLength = 3800; // Leave some room for formatting
+    let analysisText = latestEntry.analysis || '';
+    let dataJsonText = JSON.stringify(latestEntry.data, null, 2);
+    
+    // If analysis is too long, truncate it
+    if (analysisText.length > 2000) {
+      analysisText = analysisText.substring(0, 2000) + '\n\n... (текст обрезан, слишком длинный)';
+    }
+    
+    // If data JSON is too long, truncate it
+    if (dataJsonText.length > 500) {
+      dataJsonText = dataJsonText.substring(0, 500) + '\n... (данные обрезаны)';
+    }
+
+    let dataText = `
 🧪 <b>${getMedicalTypeText(latestEntry.type)}</b>
 📅 ${date}
 
 <b>📊 Данные:</b>
-${JSON.stringify(latestEntry.data, null, 2)}
+${dataJsonText}
 
-${latestEntry.analysis ? `\n<b>🔍 Анализ:</b>\n${latestEntry.analysis}` : ''}
+${analysisText ? `\n<b>🔍 Анализ:</b>\n${analysisText}` : ''}
 
 ${latestEntry.recommendations ? `\n<b>💡 Рекомендации:</b>\n${latestEntry.recommendations}` : ''}
     `;
+    
+    // Final safety check - ensure message is not too long
+    if (dataText.length > maxLength) {
+      dataText = dataText.substring(0, maxLength) + '\n\n... (сообщение обрезано)';
+    }
 
     const keyboard = {
       reply_markup: {
@@ -302,6 +322,15 @@ ${latestEntry.recommendations ? `\n<b>💡 Рекомендации:</b>\n${late
 
   } catch (error) {
     console.error('Error showing medical data:', error);
+    
+    // Report error to Telegram notifications
+    const { captureException } = await import('../utils/sentry');
+    captureException(error as Error, {
+      user: ctx.user,
+      context: 'show_medical_data',
+      telegramId: ctx.from?.id,
+    });
+    
     await ctx.reply('❌ Не удалось загрузить медицинские данные.');
   }
 }
