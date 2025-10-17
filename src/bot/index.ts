@@ -7,7 +7,7 @@ import { handleFoodPhotoAnalysis, handleFoodTextAnalysis, saveFoodEntry, saveFoo
 import { showDashboard, showNutritionBreakdown } from '../handlers/dashboard';
 import { addWater, showWaterMenu, showWaterHistory } from '../handlers/water';
 import { handleAICoachMessage, startAICoach, showPopularQuestions, showAITips } from '../handlers/ai-coach';
-import { showMedicalMenu, handleMedicalDocumentUpload, handleMedicalTextInput, showMedicalHistory, showMedicalData, handleMedicalPhotoAnalysis } from '../handlers/medical';
+import { showMedicalMenu, handleMedicalDocumentUpload, handleMedicalTextInput, showMedicalHistory, showMedicalData, handleMedicalPhotoAnalysis, handleMedicalDocumentAnalysis } from '../handlers/medical';
 import {
   showUserProductsMenu,
   showProductDetails,
@@ -688,7 +688,21 @@ async function handleFoodPhoto(ctx: CustomContext) {
 }
 
 async function handleDocumentUpload(ctx: CustomContext) {
-  await ctx.reply('📄 Обрабатываю документ... (функция в разработке)');
+  // Check if user is uploading medical data
+  if (ctx.currentStep === 'medical_upload') {
+    // Rate limit medical document analysis
+    const medicalLimit = checkRateLimit(ctx.from!.id, 'MEDICAL_ANALYSIS');
+    if (!medicalLimit.allowed) {
+      await ctx.reply(medicalLimit.message || '⚠️ Превышен лимит. Попробуй позже.');
+      return;
+    }
+    
+    await handleMedicalDocumentAnalysis(ctx);
+    return;
+  }
+
+  // For other document types
+  await ctx.reply('📄 Пожалуйста, сначала выбери раздел (например, медицинские анализы), а затем отправляй документ.');
 }
 
 // Handle AI coach messages

@@ -98,6 +98,106 @@ export async function handleMedicalPhotoAnalysis(ctx: CustomContext): Promise<vo
 }
 
 /**
+ * Handle medical document analysis (images sent as documents for better quality)
+ */
+export async function handleMedicalDocumentAnalysis(ctx: CustomContext): Promise<void> {
+  try {
+    if (!ctx.user) {
+      await ctx.reply('❌ Пользователь не найден');
+      return;
+    }
+
+    if (!ctx.message || !('document' in ctx.message)) {
+      await ctx.reply('Пожалуйста, отправь документ с медицинским анализом.');
+      return;
+    }
+
+    const document = ctx.message.document;
+    const mimeType = document.mime_type || '';
+    const fileName = document.file_name || '';
+
+    console.log('[handleMedicalDocumentAnalysis] Received document:', {
+      mime_type: mimeType,
+      file_name: fileName,
+      file_size: document.file_size
+    });
+
+    // Check if it's an image file
+    const isImage = mimeType.startsWith('image/') || 
+                    /\.(jpg|jpeg|png|gif|bmp|heic|heif|webp)$/i.test(fileName);
+
+    if (!isImage) {
+      await ctx.reply(
+        '❌ Этот формат пока не поддерживается.\n\n' +
+        'Поддерживаемые форматы:\n' +
+        '• Изображения (JPG, PNG, HEIC и др.)\n\n' +
+        'Для PDF файлов - сделай скриншот страницы с результатами и отправь как изображение.'
+      );
+      return;
+    }
+
+    await ctx.reply('📊 Анализирую документ с медицинским анализом...');
+
+    // Get file URL from Telegram
+    const file = await ctx.telegram.getFile(document.file_id);
+    const imageUrl = `https://api.telegram.org/file/bot${ctx.telegram.token}/${file.file_path}`;
+
+    console.log('[handleMedicalDocumentAnalysis] Image URL:', imageUrl);
+
+    // Analyze medical photo (same as photo handler)
+    const result = await analyzeMedicalPhoto(imageUrl);
+
+    console.log('[handleMedicalDocumentAnalysis] Analysis result:', result.text);
+
+    // Determine analysis type from result
+    let analysisType = 'other';
+    const lowerText = result.text.toLowerCase();
+    if (lowerText.includes('кров')) analysisType = 'blood';
+    else if (lowerText.includes('моч')) analysisType = 'urine';
+    else if (lowerText.includes('гормон')) analysisType = 'hormones';
+
+    // Save to database
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      await addMedicalData({
+        user_id: ctx.user.id,
+        type: analysisType as 'blood' | 'hormones' | 'urine' | 'other',
+        date: today,
+        data: { 
+          source: 'document',
+          file_name: fileName,
+          mime_type: mimeType,
+          extracted_text: result.text,
+          raw_data: result.data 
+        },
+        analysis: result.text,
+        recommendations: undefined
+      });
+
+      console.log('[handleMedicalDocumentAnalysis] Medical data saved to database');
+    } catch (saveError) {
+      console.error('[handleMedicalDocumentAnalysis] Error saving to database:', saveError);
+      // Continue to show results even if save fails
+    }
+
+    // Show extracted data
+    await ctx.replyWithHTML(
+      `📋 <b>Распознанные данные из анализа:</b>\n\n${result.text}\n\n` +
+      `<i>✅ Данные сохранены в базу. Проверь правильность и при необходимости скорректируй в разделе "Просмотр данных".</i>`
+    );
+
+    // Clear step and session
+    ctx.currentStep = undefined;
+    await clearUserSession(ctx.from!.id);
+
+  } catch (error) {
+    console.error('Error analyzing medical document:', error);
+    await ctx.reply('❌ Не удалось проанализировать документ. Попробуй еще раз или опиши результаты текстом.');
+  }
+}
+
+/**
  * Handle document upload for medical data
  */
 export async function handleMedicalDocumentUpload(ctx: CustomContext): Promise<void> {
